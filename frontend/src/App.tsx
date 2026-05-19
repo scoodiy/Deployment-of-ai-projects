@@ -7,6 +7,7 @@ import Screening from './pages/Screening'
 import Strategies from './pages/Strategies'
 import Backtest from './pages/Backtest'
 import Watchlist from './pages/Watchlist'
+import Chat from './pages/Chat'
 import SystemStatus from './pages/SystemStatus'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/strategies" element={<Strategies />} />
         <Route path="/backtest" element={<Backtest />} />
         <Route path="/watchlist" element={<Watchlist />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/system" element={<SystemStatus />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -70,7 +70,7 @@ app.add_middleware(
 
 # ── 注册路由 ──────────────────────────────────────────────────
 
-from app.api import backtests, market, selections, stocks, strategies, watchlist
+from app.api import backtests, chat, data, market, selections, stocks, strategies, watchlist
 
 app.include_router(market.router)
 app.include_router(stocks.router)
@@ -78,6 +78,8 @@ app.include_router(strategies.router)
 app.include_router(backtests.router)
 app.include_router(selections.router)
 app.include_router(watchlist.router)
+app.include_router(chat.router)
+app.include_router(data.router)
 
 
 # ── 健康检查 ──────────────────────────────────────────────────
