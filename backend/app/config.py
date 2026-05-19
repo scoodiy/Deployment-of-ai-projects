@@ -1,5 +1,6 @@
 """应用配置模块。"""
 
+import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -7,7 +8,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     """应用配置，从环境变量加载。"""
 
-    # 数据库 — 支持 PostgreSQL (Supabase) 或 MySQL
+    # 数据库
     DATABASE_URL: str = ""
 
     # PostgreSQL 单独参数（当 DATABASE_URL 为空时使用）
@@ -22,11 +23,14 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-this-to-a-random-secret-key"
     DEBUG: bool = False
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["https://ayuu.fun", "http://localhost:5173", "http://localhost:9988"]
-
     # 后端端口
     BACKEND_PORT: int = 9988
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """解析 CORS_ORIGINS — 支持逗号分隔字符串或 JSON 数组。"""
+        raw = os.environ.get("CORS_ORIGINS", "https://ayuu.fun,http://localhost:5173,http://localhost:9988")
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
     @property
     def resolved_database_url(self) -> str:
