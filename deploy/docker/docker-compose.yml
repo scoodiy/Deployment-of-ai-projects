@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/quantbot
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=change-me-in-production
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - quant-net
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - quant-net
+
+  strategy-engine:
+    build:
+      context: ../../strategy-engine
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - quant-net
+
+  risk-engine:
+    build:
+      context: ../../risk-engine
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - quant-net
+
+  data-collector:
+    build:
+      context: ../../data-collector
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - quant-net
+
+  qa-bot:
+    build:
+      context: ../../qa-bot
+      dockerfile: Dockerfile
+    networks:
+      - quant-net
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: quantbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - quant-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - quant-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      CLUSTER_ID: 'quant-kafka-cluster'
+    networks:
+      - quant-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  quant-net:
+    driver: bridge
