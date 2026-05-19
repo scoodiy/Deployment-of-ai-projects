@@ -1,12 +1,15 @@
 from sqlalchemy import select
 from ..core.security import get_password_hash
-from .base import async_session
+from . import base as db_base
 from .tables import User
 
 
 async def seed_admin_user():
     """Create default admin user if it doesn't exist."""
-    async with async_session() as session:
+    if not db_base.async_session:
+        return
+
+    async with db_base.async_session() as session:
         result = await session.execute(
             select(User).where(User.username == "admin")
         )

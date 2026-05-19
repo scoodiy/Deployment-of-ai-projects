@@ -13,23 +13,23 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://quantbot:quantbot123@localhost:5432/quantbot"
+    DATABASE_URL: str = ""
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # CORS
     CORS_ORIGINS: List[str] = [
+        "http://localhost:5173",
         "http://localhost:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:3000",
+        "https://ayuu.fun",
+        "https://comforting-peony-4504bd.netlify.app",
+        "https://deployment-of-ai-projects.vercel.app",
     ]
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": True,
-    }
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 @lru_cache()

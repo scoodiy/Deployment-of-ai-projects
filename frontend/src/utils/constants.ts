@@ -1,6 +1,7 @@
-const isProd = window.location.hostname === 'ayuu.fun' || window.location.hostname.endsWith('.netlify.app');
-export const API_BASE_URL = isProd ? 'https://deployment-of-ai-projects.vercel.app/api/v1' : '/api/v1';
-export const WS_URL = isProd ? 'wss://deployment-of-ai-projects.vercel.app/ws' : 'ws://localhost:8000/ws';
+// 生产环境使用 quant.ayuu.fun 的后端 API，开发环境使用 localhost:8000
+const isProd = window.location.hostname === 'ayuu.fun' || window.location.hostname === 'quant.ayuu.fun' || window.location.hostname.endsWith('.netlify.app');
+export const API_BASE_URL = isProd ? 'https://quant.ayuu.fun/api/v1' : '/api/v1';
+export const WS_URL = isProd ? 'wss://quant.ayuu.fun/ws' : 'ws://localhost:8000/ws';
 
 export const CHART_COLORS = {
   profit: '#00C853',

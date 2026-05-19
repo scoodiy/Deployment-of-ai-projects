@@ -6,7 +6,6 @@ from sqlalchemy import text
 from .core.config import get_settings
 from .core.events import lifespan
 from .api.v1 import users, trades, strategies, risk, stocks, crypto, qa
-from .db.base import async_session
 
 settings = get_settings()
 
@@ -41,7 +40,7 @@ try:
             content={"detail": f"Rate limit exceeded: {exc.detail}"},
         )
 except ImportError:
-    limiter = None  # slowapi not installed, skip rate limiting
+    limiter = None
 
 
 # --- Routers ---
@@ -57,8 +56,13 @@ app.include_router(qa.router, prefix="/api/v1")
 # --- Health check ---
 @app.get("/health")
 async def health():
+    from .db import base as db_base
     try:
-        async with async_session() as session:
+        sf = db_base.async_session
+        ok = db_base.is_database_available()
+        if not ok or not sf:
+            return {"status": "ok", "service": "quant-trading-bot", "db": "memory-mode"}
+        async with sf() as session:
             await session.execute(text("SELECT 1"))
         return {"status": "ok", "service": "quant-trading-bot", "db": "connected"}
     except Exception as e:
