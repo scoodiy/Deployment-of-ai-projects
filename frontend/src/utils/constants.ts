@@ -1,5 +1,6 @@
-export const API_BASE_URL = '/api/v1';
-export const WS_URL = 'ws://localhost:8000/ws';
+const isProd = window.location.hostname === 'ayuu.fun' || window.location.hostname.endsWith('.netlify.app');
+export const API_BASE_URL = isProd ? 'https://deployment-of-ai-projects.vercel.app/api/v1' : '/api/v1';
+export const WS_URL = isProd ? 'wss://deployment-of-ai-projects.vercel.app/ws' : 'ws://localhost:8000/ws';
 
 export const CHART_COLORS = {
   profit: '#00C853',
