@@ -30,15 +30,17 @@ def get_market_overview(db: Session) -> MarketOverview:
     total_amount = float(stats.total_amount or 0)
     avg_pct_change = float(stats.avg_pct_change or 0)
 
-    def _top_stocks(order_col, limit: int = 10) -> list[StockListItem]:
-        rows = (
+    def _top_stocks(order_col, limit: int = 10, descending: bool = True) -> list[StockListItem]:
+        q = (
             db.query(StockRealtime, Stock)
             .join(Stock, Stock.code == StockRealtime.code)
             .filter(Stock.is_active == True)
-            .order_by(desc(order_col))
-            .limit(limit)
-            .all()
         )
+        if descending:
+            q = q.order_by(desc(order_col))
+        else:
+            q = q.order_by(order_col)
+        rows = q.limit(limit).all()
         return [
             StockListItem(
                 code=r.Stock.code,
@@ -57,7 +59,7 @@ def get_market_overview(db: Session) -> MarketOverview:
         ]
 
     top_gainers = _top_stocks(StockRealtime.pct_change)
-    top_losers = _top_stocks(StockRealtime.pct_change.asc())
+    top_losers = _top_stocks(StockRealtime.pct_change, descending=False)
     top_volume = _top_stocks(StockRealtime.amount)
 
     # 大盘指数 (上证/深证/创业板)
