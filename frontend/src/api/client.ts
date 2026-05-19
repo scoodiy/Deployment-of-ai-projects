@@ -19,7 +19,14 @@ const client = axios.create({
 })
 
 client.interceptors.response.use(
-  (res) => res.data,
+  (res) => {
+    // 检查响应是否是 JSON（防止 SPA 路由返回 HTML 被当作 API 数据）
+    const contentType = res.headers['content-type'] || ''
+    if (typeof res.data === 'string' && res.data.trimStart().startsWith('<')) {
+      return Promise.reject(new Error('后端服务未连接，请稍后再试'))
+    }
+    return res.data
+  },
   (err) => {
     const msg = err.response?.data?.detail || err.message || '请求失败'
     return Promise.reject(new Error(msg))

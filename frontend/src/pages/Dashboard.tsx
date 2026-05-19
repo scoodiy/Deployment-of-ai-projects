@@ -73,6 +73,26 @@ function TopTable({ title, stocks, field, fieldLabel }: { title: string; stocks:
   )
 }
 
+function OfflineHero() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 space-y-6">
+      <div className="text-6xl">📈</div>
+      <h2 className="text-2xl font-bold text-gray-800">Stock-AYUU 股票数据分析平台</h2>
+      <p className="text-gray-500 max-w-md text-center">
+        后端数据服务正在部署中，<br />
+        请稍后再访问以查看实时市场数据。
+      </p>
+      <div className="flex gap-4 text-sm text-gray-400">
+        <span>📊 市场概览</span>
+        <span>📈 K线分析</span>
+        <span>🔍 智能选股</span>
+        <span>⏱️ 策略回测</span>
+      </div>
+      <Disclaimer />
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<MarketOverview | null>(null)
   const [loading, setLoading] = useState(true)
@@ -89,11 +109,9 @@ export default function Dashboard() {
     return <div className="flex items-center justify-center py-20"><div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" /></div>
   }
 
-  if (error) {
-    return <div className="card text-center py-12 text-red-500">{error}</div>
+  if (error || !data) {
+    return <OfflineHero />
   }
-
-  if (!data) return null
 
   return (
     <div className="space-y-6">

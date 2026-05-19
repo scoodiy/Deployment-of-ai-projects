@@ -1,133 +1,123 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { fetchIndustries, fetchStockList } from '../api/stocks'
-import Disclaimer from '../components/Disclaimer'
-import StockTable from '../components/StockTable'
-import type { StockListItem } from '../types'
-
-const MARKETS = ['', 'SH', 'SZ', 'BJ']
-const MARKET_LABELS: Record<string, string> = { '': '全部市场', SH: '上交所', SZ: '深交所', BJ: '北交所' }
-const SORT_OPTIONS = [
-  { value: 'code', label: '代码' },
-  { value: 'pct_change', label: '涨跌幅' },
-  { value: 'amount', label: '成交额' },
-  { value: 'volume', label: '成交量' },
-  { value: 'turnover', label: '换手率' },
-  { value: 'market_cap', label: '总市值' },
-]
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { fetchStockList, fetchIndustries } from '../api/stocks'
+import type { StockListItem, PaginatedResponse } from '../types'
 
 export default function StockList() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [stocks, setStocks] = useState<StockListItem[]>([])
-  const [total, setTotal] = useState(0)
+  const [data, setData] = useState<PaginatedResponse<StockListItem> | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '')
+  const [industry, setIndustry] = useState(searchParams.get('industry') || '')
   const [industries, setIndustries] = useState<string[]>([])
+  const page = parseInt(searchParams.get('page') || '1')
 
-  const keyword = searchParams.get('keyword') || ''
-  const market = searchParams.get('market') || ''
-  const industry = searchParams.get('industry') || ''
-  const sortBy = searchParams.get('sort_by') || 'code'
-  const sortOrder = searchParams.get('sort_order') || 'asc'
-  const page = Number(searchParams.get('page')) || 1
-  const pageSize = Number(searchParams.get('page_size')) || 20
+  useEffect(() => {
+    fetchIndustries().then(setIndustries).catch(() => {})
+  }, [])
 
-  const load = useCallback(() => {
+  useEffect(() => {
     setLoading(true)
-    fetchStockList({ keyword: keyword || undefined, market: market || undefined, industry: industry || undefined, sort_by: sortBy, sort_order: sortOrder, page, page_size: pageSize })
-      .then((res) => { setStocks(res.items); setTotal(res.total) })
-      .catch(() => { setStocks([]); setTotal(0) })
+    setError('')
+    fetchStockList({ keyword, industry, page, page_size: 20 })
+      .then(setData)
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [keyword, market, industry, sortBy, sortOrder, page, pageSize])
+  }, [keyword, industry, page])
 
-  useEffect(() => { load() }, [load])
-  useEffect(() => { fetchIndustries().then(setIndustries).catch(() => {}) }, [])
-
-  function updateParam(key: string, value: string) {
-    const next = new URLSearchParams(searchParams)
-    if (value) next.set(key, value)
-    else next.delete(key)
-    if (key !== 'page') next.set('page', '1')
-    setSearchParams(next)
+  const handleSearch = () => {
+    const params = new URLSearchParams()
+    if (keyword) params.set('keyword', keyword)
+    if (industry) params.set('industry', industry)
+    params.set('page', '1')
+    setSearchParams(params)
   }
 
-  const totalPages = Math.ceil(total / pageSize)
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" /></div>
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="text-4xl">📋</div>
+        <p className="text-gray-500">后端服务未连接，请稍后再试</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      {/* 筛选栏 */}
+      {/* 搜索栏 */}
       <div className="card">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-gray-500 mb-1">搜索</label>
+            <label className="block text-sm text-gray-500 mb-1">搜索</label>
             <input
-              type="text"
               className="input-field"
-              placeholder="输入股票代码或名称..."
-              defaultValue={keyword}
-              onKeyDown={(e) => { if (e.key === 'Enter') updateParam('keyword', (e.target as HTMLInputElement).value) }}
+              placeholder="股票代码或名称"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">市场</label>
-            <select className="select-field" value={market} onChange={(e) => updateParam('market', e.target.value)}>
-              {MARKETS.map((m) => <option key={m} value={m}>{MARKET_LABELS[m]}</option>)}
+          <div className="min-w-[150px]">
+            <label className="block text-sm text-gray-500 mb-1">行业</label>
+            <select className="select-field w-full" value={industry} onChange={(e) => { setIndustry(e.target.value); }}>
+              <option value="">全部</option>
+              {industries.map((i) => <option key={i} value={i}>{i}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">行业</label>
-            <select className="select-field" value={industry} onChange={(e) => updateParam('industry', e.target.value)}>
-              <option value="">全部行业</option>
-              {industries.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">排序</label>
-            <select className="select-field" value={sortBy} onChange={(e) => updateParam('sort_by', e.target.value)}>
-              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">方向</label>
-            <select className="select-field" value={sortOrder} onChange={(e) => updateParam('sort_order', e.target.value)}>
-              <option value="asc">升序</option>
-              <option value="desc">降序</option>
-            </select>
-          </div>
+          <button className="btn-primary" onClick={handleSearch}>搜索</button>
         </div>
       </div>
 
-      {/* 结果统计 */}
-      <div className="text-sm text-gray-500">
-        共 {total} 只股票
+      {/* 股票列表 */}
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="table-header">
+              <th className="px-4 py-3">代码</th>
+              <th className="px-4 py-3">名称</th>
+              <th className="px-4 py-3">行业</th>
+              <th className="px-4 py-3 text-right">最新价</th>
+              <th className="px-4 py-3 text-right">涨跌幅</th>
+              <th className="px-4 py-3 text-right">成交额</th>
+              <th className="px-4 py-3 text-right">换手率</th>
+              <th className="px-4 py-3 text-right">PE</th>
+              <th className="px-4 py-3 text-right">市值</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {data.items.map((s) => (
+              <tr key={s.code} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/stocks/${s.code}`)}>
+                <td className="px-4 py-3 font-mono text-blue-600">{s.code}</td>
+                <td className="px-4 py-3">{s.name}</td>
+                <td className="px-4 py-3 text-gray-500">{s.industry || '-'}</td>
+                <td className="px-4 py-3 text-right font-mono">{s.price?.toFixed(2) ?? '-'}</td>
+                <td className={`px-4 py-3 text-right font-mono ${(s.pct_change ?? 0) > 0 ? 'text-rise' : (s.pct_change ?? 0) < 0 ? 'text-fall' : ''}`}>
+                  {s.pct_change != null ? `${s.pct_change > 0 ? '+' : ''}${s.pct_change.toFixed(2)}%` : '-'}
+                </td>
+                <td className="px-4 py-3 text-right font-mono">{s.amount != null ? (s.amount / 1e8).toFixed(2) + '亿' : '-'}</td>
+                <td className="px-4 py-3 text-right font-mono">{s.turnover != null ? s.turnover.toFixed(2) + '%' : '-'}</td>
+                <td className="px-4 py-3 text-right font-mono">{s.pe_ratio?.toFixed(1) ?? '-'}</td>
+                <td className="px-4 py-3 text-right font-mono">{s.market_cap != null ? (s.market_cap / 1e8).toFixed(0) + '亿' : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      {/* 股票表格 */}
-      <StockTable stocks={stocks} loading={loading} />
 
       {/* 分页 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            className="btn-secondary text-sm"
-            disabled={page <= 1}
-            onClick={() => updateParam('page', String(page - 1))}
-          >
-            上一页
-          </button>
-          <span className="text-sm text-gray-600">
-            {page} / {totalPages}
-          </span>
-          <button
-            className="btn-secondary text-sm"
-            disabled={page >= totalPages}
-            onClick={() => updateParam('page', String(page + 1))}
-          >
-            下一页
-          </button>
+      {data.total > 20 && (
+        <div className="flex justify-center gap-2">
+          <button className="btn-secondary" disabled={page <= 1} onClick={() => setSearchParams({ ...Object.fromEntries(searchParams), page: String(page - 1) })}>上一页</button>
+          <span className="py-2 px-4 text-sm text-gray-500">第 {page} 页 / 共 {Math.ceil(data.total / 20)} 页</span>
+          <button className="btn-secondary" disabled={page * 20 >= data.total} onClick={() => setSearchParams({ ...Object.fromEntries(searchParams), page: String(page + 1) })}>下一页</button>
         </div>
       )}
-
-      <Disclaimer />
     </div>
   )
 }
