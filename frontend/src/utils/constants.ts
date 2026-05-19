@@ -1,7 +1,19 @@
-// 生产环境使用 quant.ayuu.fun 的后端 API，开发环境使用 localhost:8000
-const isProd = window.location.hostname === 'ayuu.fun' || window.location.hostname === 'quant.ayuu.fun' || window.location.hostname.endsWith('.netlify.app');
-export const API_BASE_URL = isProd ? 'https://quant.ayuu.fun/api/v1' : '/api/v1';
-export const WS_URL = isProd ? 'wss://quant.ayuu.fun/ws' : 'ws://localhost:8000/ws';
+// API 地址：生产环境用服务器直连端口
+const isDev = window.location.protocol === 'http:' && window.location.hostname === 'localhost';
+
+let API_BASE_URL: string;
+let WS_URL: string;
+
+if (isDev) {
+  API_BASE_URL = '/api/v1';
+  WS_URL = 'ws://localhost:8000/ws';
+} else {
+  // 所有生产环境统一使用服务器端口直连
+  API_BASE_URL = 'https://quant.ayuu.fun:61241/api/v1';
+  WS_URL = 'wss://quant.ayuu.fun:61241/ws';
+}
+
+export { API_BASE_URL, WS_URL };
 
 export const CHART_COLORS = {
   profit: '#00C853',
