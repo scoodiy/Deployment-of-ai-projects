@@ -8,9 +8,9 @@ if (isDev) {
   API_BASE_URL = '/api/v1';
   WS_URL = 'ws://localhost:8000/ws';
 } else {
-  // 所有生产环境统一使用服务器端口直连
-  API_BASE_URL = 'https://quant.ayuu.fun:61241/api/v1';
-  WS_URL = 'wss://quant.ayuu.fun:61241/ws';
+  // 生产环境使用 Vercel 后端
+  API_BASE_URL = 'https://deployment-of-ai-projects-83am.vercel.app/api/v1';
+  WS_URL = 'wss://deployment-of-ai-projects-83am.vercel.app/ws';
 }
 
 export { API_BASE_URL, WS_URL };
