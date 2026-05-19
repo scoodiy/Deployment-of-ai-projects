@@ -93,3 +93,11 @@ export interface QAResponse {
   sources: string[];
   confidence: number;
 }
+
+export interface RiskRule {
+  id: string;
+  user_id: string;
+  rule_type: string;
+  params: Record<string, any>;
+  is_active: boolean;
+}

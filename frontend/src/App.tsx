@@ -20,7 +20,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;

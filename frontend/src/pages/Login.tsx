@@ -119,7 +119,7 @@ export function Login() {
           </form>
 
           <p className="text-xs text-gray-500 text-center mt-6">
-            默认账号: admin / admin123
+            量化交易智能平台
           </p>
         </div>
       </div>

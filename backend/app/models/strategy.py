@@ -1,6 +1,11 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Any
+
+
+def _default_now() -> datetime:
+    return datetime.now()
+
 
 class StrategyConfig(BaseModel):
     id: str
@@ -9,4 +14,4 @@ class StrategyConfig(BaseModel):
     type: str
     params: dict[str, Any] = {}
     is_active: bool = False
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=_default_now)

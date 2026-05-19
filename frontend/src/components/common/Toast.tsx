@@ -19,7 +19,7 @@ function Toast({ message, type, onClose }: { message: string; type: string; onCl
   useEffect(() => {
     const timer = setTimeout(onClose, 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [onClose]);
 
   return (
     <div className={clsx(

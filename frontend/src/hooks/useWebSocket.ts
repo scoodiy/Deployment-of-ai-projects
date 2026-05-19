@@ -9,8 +9,12 @@ export function useWebSocket(onMessage?: (data: any) => void) {
       const ws = new WebSocket(WS_URL);
       ws.onmessage = (e) => onMessage?.(JSON.parse(e.data));
       ws.onclose = () => setTimeout(connect, 3000);
+      ws.onerror = () => ws.close();
       wsRef.current = ws;
-    } catch {}
+    } catch (err) {
+      console.error('WebSocket connection failed:', err);
+      setTimeout(connect, 3000);
+    }
   }, [onMessage]);
 
   useEffect(() => {

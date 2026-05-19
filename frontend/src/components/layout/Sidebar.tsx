@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useUIStore } from '../../stores/uiStore';
+import { NAV_ITEMS } from '../../utils/constants';
 import {
   LayoutDashboard, TrendingUp, Brain, Shield, BarChart3, Bitcoin,
   MessageSquare, Settings, ChevronLeft, ChevronRight,
@@ -9,17 +10,6 @@ import clsx from 'clsx';
 const ICONS: Record<string, any> = {
   LayoutDashboard, TrendingUp, Brain, Shield, BarChart3, Bitcoin, MessageSquare, Settings,
 };
-
-const NAV_ITEMS = [
-  { path: '/', label: '仪表盘', icon: 'LayoutDashboard' },
-  { path: '/trading', label: '交易', icon: 'TrendingUp' },
-  { path: '/strategies', label: '策略', icon: 'Brain' },
-  { path: '/risk', label: '风控', icon: 'Shield' },
-  { path: '/stocks', label: '股票', icon: 'BarChart3' },
-  { path: '/crypto', label: '加密货币', icon: 'Bitcoin' },
-  { path: '/qa-bot', label: '智能问答', icon: 'MessageSquare' },
-  { path: '/admin', label: '管理', icon: 'Settings' },
-];
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();

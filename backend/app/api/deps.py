@@ -17,6 +17,6 @@ async def get_db():
     }
 
 async def get_current_active_user(user: dict = Depends(get_current_user)) -> dict:
-    if not user:
+    if not user.get("user_id"):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
