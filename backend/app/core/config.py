@@ -1,26 +1,35 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import List
 
 
 class Settings(BaseSettings):
     APP_NAME: str = "Quant Trading Bot"
     DEBUG: bool = False
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/quantbot"
-    REDIS_URL: str = "redis://localhost:6379/0"
-    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
-    SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
+
+    # Security
+    SECRET_KEY: str = "b2a8035045766514ac01dd8930a16c62d9c4365875f7198582cbac351d1b22e0"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    CORS_ORIGINS: list[str] = [
+
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://quantbot:quantbot123@localhost:5432/quantbot"
+
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # CORS
+    CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
-        "http://localhost:5173",
-        "https://comforting-peony-4504bd.netlify.app",
-        "https://ayuu.fun",
-        "https://quant.ayuu.fun",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
     ]
 
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+    }
 
 
 @lru_cache()
