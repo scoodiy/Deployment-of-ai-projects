@@ -345,12 +345,73 @@ cd data-collector && python -m scheduler.main
 
 ### 5. 使用 Docker Compose
 
-```bash
-cd deploy/docker
-docker-compose up -d
+#### 开发环境（仅后端 + 数据库）
 
-# 生产环境
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```bash
+docker-compose up -d
+# 访问后端: http://localhost:8000
+```
+
+#### 生产环境（全栈：Nginx + 前端 + 后端 + PostgreSQL + Redis）
+
+```bash
+# 1. 配置环境变量
+cp .env.docker .env
+# 编辑 .env 修改密码等敏感配置
+
+# 2. 构建并启动
+docker-compose -f docker-compose.prod.yml up -d --build
+
+# 3. 查看状态
+docker-compose -f docker-compose.prod.yml ps
+
+# 4. 查看日志
+docker-compose -f docker-compose.prod.yml logs -f backend
+```
+
+**生产环境服务架构：**
+
+```
+┌─────────────────────────────────────────────┐
+│  Nginx (frontend container, port 80)        │
+│  ├─ /         → 静态文件 (React SPA)        │
+│  ├─ /api/     → proxy → backend:8000        │
+│  ├─ /ws       → proxy → backend:8000 (WS)   │
+│  └─ /health   → proxy → backend:8000        │
+└─────────────────────────────────────────────┘
+         │
+┌────────┴────────────────────────────────────┐
+│  quant-net (Docker bridge network)          │
+│                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │ backend  │  │   db     │  │  redis   │  │
+│  │ FastAPI  │  │PostgreSQL│  │  cache   │  │
+│  │ :8000    │  │  :5432   │  │  :6379   │  │
+│  └──────────┘  └──────────┘  └──────────┘  │
+└─────────────────────────────────────────────┘
+```
+
+**常用命令：**
+
+```bash
+# 查看所有容器状态
+docker-compose -f docker-compose.prod.yml ps
+
+# 查看某个服务日志
+docker-compose -f docker-compose.prod.yml logs -f backend
+docker-compose -f docker-compose.prod.yml logs -f db
+
+# 重启某个服务
+docker-compose -f docker-compose.prod.yml restart backend
+
+# 停止所有服务
+docker-compose -f docker-compose.prod.yml down
+
+# 停止并删除数据卷（⚠️ 会清除数据库数据）
+docker-compose -f docker-compose.prod.yml down -v
+
+# 重新构建某个服务
+docker-compose -f docker-compose.prod.yml up -d --build backend
 ```
 
 ### 6. 访问
@@ -384,6 +445,59 @@ pytest tests/e2e/ -v
 # 前端代码检查
 cd frontend && npm run lint
 ```
+
+---
+
+## Docker 部署详解
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `POSTGRES_USER` | PostgreSQL 用户名 | `quantbot` |
+| `POSTGRES_PASSWORD` | PostgreSQL 密码 | `quantbot123` |
+| `POSTGRES_DB` | PostgreSQL 数据库名 | `quantbot` |
+| `DATABASE_URL` | 后端数据库连接字符串 | `postgresql+asyncpg://quantbot:quantbot123@db:5432/quantbot` |
+| `REDIS_URL` | Redis 连接字符串 | `redis://redis:6379/0` |
+| `SECRET_KEY` | JWT 签名密钥 | 见 `.env.docker` |
+| `DEBUG` | 调试模式 | `false` |
+| `CORS_ORIGINS` | CORS 允许的来源（JSON 数组） | 见 `.env.docker` |
+
+### 数据持久化
+
+| Volume | 用途 |
+|--------|------|
+| `postgres_data` | PostgreSQL 数据文件 |
+| `redis_data` | Redis 持久化数据 |
+
+### 健康检查
+
+所有服务均配置了 Docker 健康检查：
+
+| 服务 | 检查方式 | 间隔 |
+|------|----------|------|
+| db | `pg_isready` | 10s |
+| redis | `redis-cli ping` | 10s |
+| backend | `curl /health` | 30s |
+| frontend | `wget /health` (→ nginx → backend) | 30s |
+
+### 日志管理
+
+所有服务配置 JSON 文件日志驱动，自动轮转：
+- 单个日志文件最大 10MB
+- 最多保留 3 个日志文件
+
+```bash
+# 查看实时日志
+docker-compose -f docker-compose.prod.yml logs -f
+
+# 查看某服务最近 100 行日志
+docker-compose -f docker-compose.prod.yml logs --tail 100 backend
+```
+
+### 网络隔离
+
+所有服务运行在 `quant-net` bridge 网络中，只有 frontend（Nginx）对外暴露端口 80。数据库和 Redis 不对外暴露，仅内部可访问。
 
 ---
 

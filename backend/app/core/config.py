@@ -23,13 +23,13 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:3000",
         "https://ayuu.fun",
+        "https://quant.ayuu.fun",
         "https://comforting-peony-4504bd.netlify.app",
-        "https://deployment-of-ai-projects.vercel.app",
+        "https://*.netlify.app",
     ]
 
     class Config:
         env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 @lru_cache()
