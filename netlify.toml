@@ -9,7 +9,13 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "http://103.236.96.84:9988/api/:splat"
+  to = "http://103.236.96.84/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "http://103.236.96.84/health"
   status = 200
   force = true
 
