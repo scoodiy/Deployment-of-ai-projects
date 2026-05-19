@@ -1,33 +1,29 @@
-# ---- Build Stage ----
-FROM node:20-alpine AS build
+# Build stage
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+# 复制依赖文件
+COPY package*.json ./
+
+# 安装依赖
 RUN npm ci
 
+# 复制源代码
 COPY . .
+
+# 构建
 RUN npm run build
 
-# ---- Runtime Stage ----
-FROM nginx:1.25-alpine
+# Production stage
+FROM nginx:alpine
 
-# Remove default config
-RUN rm /etc/nginx/conf.d/default.conf
+# 复制构建产物
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY --from=build /app/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built frontend
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Create cache directories for nginx
-RUN mkdir -p /var/cache/nginx/client_temp \
-    && chown -R nginx:nginx /var/cache/nginx
+# 复制 Nginx 配置
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -sf http://127.0.0.1:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

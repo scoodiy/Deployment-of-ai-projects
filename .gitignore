@@ -1,20 +1,19 @@
-# Python
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-dist/
-build/
-.eggs/
-*.egg
+*.pyc
 .venv/
 venv/
-env/
 
-# Node
-node_modules/
-frontend/dist/
-*.tsbuildinfo
+# Build
+dist/
+build/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.production
 
 # IDE
 .vscode/
@@ -22,24 +21,12 @@ frontend/dist/
 *.swp
 *.swo
 
-# Environment
-.env
-.env.local
-.env.production
-
-# Docker
-*.log
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Test
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
+# Docker
+docker-compose.override.yml
 
-# Data
-*.db
-*.sqlite3
+# Logs
+*.log
