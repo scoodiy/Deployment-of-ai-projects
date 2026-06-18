@@ -1,0 +1,3 @@
+module.exports=[88367,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(50944);a.s(["default",0,function(){let a=(0,d.useRouter)();return(0,c.useEffect)(()=>{fetch("/api/admin/profile").then(b=>{b.ok?a.replace("/admin/dashboard"):a.replace("/admin/login")}).catch(()=>a.replace("/admin/login"))},[a]),(0,b.jsx)("div",{className:"min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center",children:(0,b.jsx)("div",{className:"text-white",children:"加载中..."})})}])}];
+
+//# sourceMappingURL=app_admin_page_tsx_0weq3nw._.js.map

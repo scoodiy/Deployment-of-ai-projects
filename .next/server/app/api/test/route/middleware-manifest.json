@@ -1,0 +1,40 @@
+{
+  "sorted_middleware": [
+    "/api/test/route"
+  ],
+  "middleware": {},
+  "instrumentation": null,
+  "functions": {
+    "/api/test/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/test/route_client-reference-manifest.js",
+        "server/edge/chunks/_next-internal_server_app_api_test_route_actions_0qdptci.js",
+        "server/edge/chunks/[root-of-the-server]__0l~p3v.._.js",
+        "server/edge/chunks/node_modules_next_dist_0sliq4o._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0yb03pf.js"
+      ],
+      "name": "app/api/test/route",
+      "page": "/api/test/route",
+      "entrypoint": "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_0yb03pf.js",
+      "matchers": [
+        {
+          "regexp": "^/api/test(?:/)?$",
+          "originalSource": "/api/test"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "jPeJoWSr5Jxe_wnxvNd-_",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "mjTt8esQntz2yvyX4CsngD2XT4Y90KczDQakAUExbxs=",
+        "__NEXT_PREVIEW_MODE_ID": "336274048d2fe6ffb97456c1805ce295",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "b6bf844d307fd8713d0cdc3e12f3f3998127e9847ed4dadfcb64ad30fadb0684",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "0803282efaeff74cffcff664060c370e71874c12e2867f388d974d070ea047ad"
+      }
+    }
+  }
+}

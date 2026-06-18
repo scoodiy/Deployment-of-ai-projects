@@ -1,0 +1,316 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  nickname: string;
+  avatar: string;
+  bio: string;
+  signature: string;
+  role: string;
+  status: string;
+  ban_reason: string;
+  admin_remark: string;
+  ai_daily_limit: number;
+  must_change_password: number;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  
+  // 修改角色相关
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [newRole, setNewRole] = useState('');
+  
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ nickname: '', bio: '', signature: '', admin_remark: '', ai_daily_limit: 10 });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    fetch(`/api/admin/users/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        setUser(data.user);
+        setForm({
+          nickname: data.user.nickname || '',
+          bio: data.user.bio || '',
+          signature: data.user.signature || '',
+          admin_remark: data.user.admin_remark || '',
+          ai_daily_limit: data.user.ai_daily_limit || 10,
+        });
+      });
+  }, [id]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: '保存成功' });
+        setEditing(false);
+        // Reload user data
+        const userRes = await fetch(`/api/admin/users/${id}`);
+        const userData = await userRes.json();
+        setUser(userData.user);
+      } else {
+        setMessage({ type: 'error', text: data.error || '保存失败' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: '保存失败' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangeRole = async () => {
+    if (!newRole) return;
+
+    const res = await fetch(`/api/admin/users/${id}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setShowRoleDialog(false);
+      loadUser();
+    } else {
+      alert(data.error || '修改失败');
+    }
+  };
+
+  const handleBan = async () => {
+    const reason = prompt('请输入封禁原因：');
+    if (reason === null) return;
+
+    const res = await fetch(`/api/admin/users/${id}/ban`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.location.reload();
+    } else {
+      alert(data.error || '封禁失败');
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!confirm('确定解封？')) return;
+
+    const res = await fetch(`/api/admin/users/${id}/unban`, { method: 'PUT' });
+    const data = await res.json();
+    if (res.ok) {
+      window.location.reload();
+    } else {
+      alert(data.error || '解封失败');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!confirm('确定重置密码？')) return;
+
+    const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: 'PUT' });
+    const data = await res.json();
+    if (res.ok) {
+      if (data.temp_password) {
+        alert(`密码已重置\n临时密码: ${data.temp_password}\n请妥善保管`);
+      } else {
+        alert('密码已重置');
+      }
+    } else {
+      alert(data.error || '重置失败');
+    }
+  };
+
+  if (!user) {
+    return <div className="text-white text-center py-20">加载中...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={() => router.push('/admin/users')} className="text-gray-400 hover:text-white">
+          ← 返回列表
+        </button>
+        <h2 className="text-2xl font-bold text-white">用户详情</h2>
+      </div>
+
+      {/* 基本信息卡片 */}
+      <div className="bg-black/30 backdrop-blur-xl rounded-xl border border-white/10 p-6">
+        <div className="flex items-start gap-6">
+          <div className="w-20 h-20 rounded-full bg-indigo-500/20 border-2 border-indigo-500/50 flex items-center justify-center overflow-hidden">
+            {user.avatar ? (
+              <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-3xl text-indigo-300">{(user.nickname || user.username).charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white">{user.nickname || user.username}</h3>
+            <p className="text-gray-400">@{user.username}</p>
+            <p className="text-gray-400 text-sm">{user.email}</p>
+            <div className="flex gap-2 mt-2">
+              {user.role === 'super_admin' && <span className="px-2 py-0.5 bg-red-500/20 text-red-300 rounded text-xs">超级管理员</span>}
+              {user.role === 'admin' && <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">管理员</span>}
+              {user.role === 'user' && <span className="px-2 py-0.5 bg-gray-500/20 text-gray-300 rounded text-xs">普通用户</span>}
+              {user.status === 'banned' && <span className="px-2 py-0.5 bg-red-500/20 text-red-300 rounded text-xs">已封禁</span>}
+              {user.must_change_password === 1 && <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded text-xs">需改密</span>}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {!editing && (
+              <button onClick={() => setEditing(true)} className="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30">
+                ✏️ 编辑
+              </button>
+            )}
+            {user.status === 'active' ? (
+              <button onClick={handleBan} className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30">
+                🚫 封禁
+              </button>
+            ) : (
+              <button onClick={handleUnban} className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30">
+                ✅ 解封
+              </button>
+            )}
+            <button onClick={handleResetPassword} className="px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30">
+              🔑 重置密码
+            </button>
+          </div>
+        </div>
+
+        {user.status === 'banned' && user.ban_reason && (
+          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
+            封禁原因: {user.ban_reason}
+          </div>
+        )}
+      </div>
+
+      {/* 详细信息 */}
+      <div className="bg-black/30 backdrop-blur-xl rounded-xl border border-white/10 p-6">
+        <h3 className="text-lg font-bold text-white mb-4">详细信息</h3>
+
+        {editing ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-300 text-sm mb-1">昵称</label>
+              <input
+                type="text"
+                value={form.nickname}
+                onChange={e => setForm({ ...form, nickname: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm mb-1">个人简介</label>
+              <textarea
+                value={form.bio}
+                onChange={e => setForm({ ...form, bio: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 h-20"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm mb-1">个性签名</label>
+              <input
+                type="text"
+                value={form.signature}
+                onChange={e => setForm({ ...form, signature: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm mb-1">后台备注</label>
+              <textarea
+                value={form.admin_remark}
+                onChange={e => setForm({ ...form, admin_remark: e.target.value })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 h-20"
+                placeholder="仅管理员可见"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm mb-1">AI 每日限额</label>
+              <input
+                type="number"
+                value={form.ai_daily_limit}
+                onChange={e => setForm({ ...form, ai_daily_limit: Number(e.target.value) })}
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                min="0"
+              />
+            </div>
+
+            {message.text && (
+              <div className={`p-3 rounded-lg text-sm ${
+                message.type === 'success' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'
+              }`}>
+                {message.text}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={handleSave} disabled={saving} className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50">
+                {saving ? '保存中...' : '💾 保存'}
+              </button>
+              <button onClick={() => setEditing(false)} className="px-6 py-2 text-gray-400 hover:text-white">
+                取消
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">昵称</div>
+              <div className="text-white">{user.nickname || '-'}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">个人简介</div>
+              <div className="text-white">{user.bio || '-'}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">个性签名</div>
+              <div className="text-white">{user.signature || '-'}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">后台备注</div>
+              <div className="text-white">{user.admin_remark || '-'}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">AI 每日限额</div>
+              <div className="text-white">{user.ai_daily_limit}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">注册时间</div>
+              <div className="text-white">{new Date(user.created_at).toLocaleString('zh-CN')}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">最后登录</div>
+              <div className="text-white">{user.last_login_at ? new Date(user.last_login_at).toLocaleString('zh-CN') : '从未登录'}</div>
+            </div>
+            <div className="p-3 bg-white/5 rounded-lg">
+              <div className="text-gray-400 text-xs mb-1">最后更新</div>
+              <div className="text-white">{new Date(user.updated_at).toLocaleString('zh-CN')}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

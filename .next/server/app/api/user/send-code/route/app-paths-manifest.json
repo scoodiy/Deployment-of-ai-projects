@@ -1,0 +1,3 @@
+{
+  "/api/user/send-code/route": "app/api/user/send-code/route.js"
+}
