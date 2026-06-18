@@ -81,6 +81,7 @@
   "/api/user/profile/route": "/api/user/profile",
   "/api/user/register/route": "/api/user/register",
   "/api/user/send-code/route": "/api/user/send-code",
+  "/api/user/upload/route": "/api/user/upload",
   "/api/weather/route": "/api/weather",
   "/chatter/[slug]/page": "/chatter/[slug]",
   "/chatter/page": "/chatter",

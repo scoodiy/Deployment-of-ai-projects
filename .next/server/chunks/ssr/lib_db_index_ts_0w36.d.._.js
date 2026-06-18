@@ -37,6 +37,7 @@ module.exports=[12259,a=>{"use strict";var b=a.i(85148),c=a.i(14747),d=a.i(54799
       mime_type TEXT DEFAULT '',
       usage_type TEXT DEFAULT 'other' CHECK(usage_type IN ('home_background', 'blog_cover', 'gallery', 'avatar', 'about', 'other')),
       alt_text TEXT DEFAULT '',
+      user_id INTEGER DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 

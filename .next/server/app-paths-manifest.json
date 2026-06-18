@@ -81,6 +81,7 @@
   "/api/user/profile/route": "app/api/user/profile/route.js",
   "/api/user/register/route": "app/api/user/register/route.js",
   "/api/user/send-code/route": "app/api/user/send-code/route.js",
+  "/api/user/upload/route": "app/api/user/upload/route.js",
   "/api/weather/route": "app/api/weather/route.js",
   "/chatter/[slug]/page": "app/chatter/[slug]/page.js",
   "/chatter/page": "app/chatter/page.js",

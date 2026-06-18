@@ -86,9 +86,9 @@ export async function POST(request: Request) {
     const db = getDb();
     try {
       const result = db.prepare(`
-        INSERT INTO media_files (file_type, filename, original_name, url, size, mime_type, usage_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(category, filename, file.name, `/uploads/${filename}`, file.size, file.type, usageType);
+        INSERT INTO media_files (file_type, filename, original_name, url, size, mime_type, usage_type, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(category, filename, file.name, `/uploads/${filename}`, file.size, file.type, usageType, admin.adminId);
 
       // 操作日志
       db.prepare('INSERT INTO operation_logs (admin_id, action, target_type, target_id, detail, ip) VALUES (?, ?, ?, ?, ?, ?)').run(

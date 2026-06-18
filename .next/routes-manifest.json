@@ -586,6 +586,12 @@
       "namedRegex": "^/api/user/send\\-code(?:/)?$"
     },
     {
+      "page": "/api/user/upload",
+      "regex": "^/api/user/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/upload(?:/)?$"
+    },
+    {
       "page": "/api/weather",
       "regex": "^/api/weather(?:/)?$",
       "routeKeys": {},
