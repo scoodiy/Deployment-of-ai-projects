@@ -10,8 +10,8 @@ export default function PageTransition({ children }: { children: ReactNode }) {
       initial={{ y: 20, opacity: 0 }}
       // 加载完毕后：回到原位，完全不透明
       animate={{ y: 0, opacity: 1 }}
-      // 动画怎么演：用优雅的弹性物理动画，持续 0.8 秒
-      transition={{ ease: "easeOut", duration: 0.8 }}
+      // 动画怎么演：快速过渡，0.3秒
+      transition={{ ease: "easeOut", duration: 0.3 }}
     >
       {children}
     </motion.div>

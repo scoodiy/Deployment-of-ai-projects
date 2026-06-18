@@ -27,6 +27,6 @@ module.exports=[12800,a=>{a.v({className:"geistsans_379cf8c7-module__VbwuSW__cla
                     box-shadow: 0 8px 32px rgba(191, 219, 254, 0.25) !important;
                     transition: all 0.7s ease !important;
                   }
-                `}})]})]}),(0,b.jsx)(t.default,{})]})})})})]})},"dynamic",0,"force-dynamic","generateMetadata",0,B],33290)},70864,a=>{a.n(a.i(33290))}];
+                `}})]})]}),(0,b.jsx)(t.default,{})]})})})})]})},"generateMetadata",0,B,"revalidate",0,60],33290)},70864,a=>{a.n(a.i(33290))}];
 
 //# sourceMappingURL=_0_qz.w2._.js.map

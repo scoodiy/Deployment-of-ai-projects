@@ -31,7 +31,8 @@ const siteConfig = {
   navTitle: dbConfig.site_title || staticConfig.navTitle,
 };
 
-export const dynamic = 'force-dynamic';
+// 使用 ISR 缓存，每60秒重新验证一次（而非每次请求都查数据库）
+export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = getSiteConfig();

@@ -1,0 +1,3 @@
+module.exports=[63588,a=>{"use strict";var b=a.i(7997);a.s(["default",0,function(){return(0,b.jsx)("div",{className:"min-h-screen flex items-center justify-center",children:(0,b.jsxs)("div",{className:"flex flex-col items-center gap-3",children:[(0,b.jsx)("div",{className:"w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"}),(0,b.jsx)("span",{className:"text-xs text-slate-400 font-bold",children:"加载中..."})]})})}])},45538,a=>{a.n(a.i(63588))}];
+
+//# sourceMappingURL=app_loading_tsx_05semg5._.js.map
