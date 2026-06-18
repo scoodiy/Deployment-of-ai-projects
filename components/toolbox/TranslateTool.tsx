@@ -6,18 +6,21 @@ export default function TranslateTool() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [direction, setDirection] = useState<'zh-en' | 'en-zh'>('zh-en');
 
   const doTranslate = async () => {
     if (!input.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `请翻译以下文本为中文（如果已经是中文则翻译为英文），只输出翻译结果，不要解释：\n${input}` })
-      });
+      // 检测语言方向
+      const hasChinese = /[\u4e00-\u9fff]/.test(input);
+      const langpair = hasChinese ? 'zh-CN|en' : 'en|zh-CN';
+
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=${langpair}`
+      );
       const data = await res.json();
-      setOutput(data.reply || data.message || data.content || '翻译失败');
+      setOutput(data.responseData?.translatedText || '翻译失败');
     } catch { setOutput('翻译服务暂时不可用'); }
     finally { setLoading(false); }
   };
@@ -30,7 +33,11 @@ export default function TranslateTool() {
         className="px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-xl hover:bg-indigo-600 disabled:opacity-40 transition-all active:scale-95">
         {loading ? '翻译中...' : '翻译'}
       </button>
-      {output && <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{output}</div>}
+      {output && (
+        <div className="p-3 rounded-xl bg-slate-100/60 dark:bg-slate-700/40 border border-slate-200/50 dark:border-slate-600/50">
+          <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{output}</p>
+        </div>
+      )}
     </motion.div>
   );
 }
