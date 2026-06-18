@@ -8,10 +8,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 使用国内 Google Fonts 镜像
-  experimental: {
-    fontProxy: "https://fonts.loli.net",
-  },
+  // experimental 配置已清理（fontProxy 在 Next.js 16 中已移除）
 };
 
 export default nextConfig;

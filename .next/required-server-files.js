@@ -220,7 +220,6 @@ self.__SERVER_FILES_MANIFEST={
       "turbopackFileSystemCacheForBuild": false,
       "turbopackInferModuleSideEffects": true,
       "turbopackPluginRuntimeStrategy": "childProcesses",
-      "fontProxy": "https://fonts.loli.net",
       "optimizePackageImports": [
         "lucide-react",
         "date-fns",
