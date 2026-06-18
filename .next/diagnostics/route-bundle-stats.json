@@ -501,12 +501,12 @@
   },
   {
     "route": "/login",
-    "firstLoadUncompressedJsBytes": 707813,
+    "firstLoadUncompressedJsBytes": 707826,
     "firstLoadChunkPaths": [
       ".next/static/chunks/13p4_fhk7i58p.js",
       ".next/static/chunks/0u19xybn09l_2.js",
       ".next/static/chunks/00-csyj9a6t-x.js",
-      ".next/static/chunks/0b582pk101om_.js",
+      ".next/static/chunks/13.ekwrgn754k.js",
       ".next/static/chunks/0vhwa11fr~4qm.js",
       ".next/static/chunks/0_z.jfmr09pj2.js",
       ".next/static/chunks/110q6k5sdl4es.js",

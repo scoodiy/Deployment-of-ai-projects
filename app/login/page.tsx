@@ -172,13 +172,15 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-white/10"></div>
           </div>
 
-          {/* 管理员入口 */}
-          <button
-            onClick={() => router.push('/admin')}
-            className="w-full py-2.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-lg font-medium hover:bg-purple-500/20 transition-all text-sm"
-          >
-            ⚙️ 管理员登录
-          </button>
+          {/* 管理员入口 - 仅登录模式显示 */}
+          {mode === 'login' && (
+            <button
+              onClick={() => router.push('/admin')}
+              className="w-full py-2.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-lg font-medium hover:bg-purple-500/20 transition-all text-sm"
+            >
+              ⚙️ 管理员登录
+            </button>
+          )}
 
           <div className="mt-6 text-center">
             <Link href="/" className="text-gray-500 hover:text-gray-400 text-sm">
