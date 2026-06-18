@@ -44,6 +44,7 @@ export default function LoginPage() {
           setUser({
             username: data.user.username,
             email: data.user.email,
+            avatar: data.user.avatar || '',
           });
           router.push('/');
         } else {

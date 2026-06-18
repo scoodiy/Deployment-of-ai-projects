@@ -115,8 +115,12 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-2">
                 <Link href="/user/settings" className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-full border border-indigo-500/30 transition-colors">
-                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {user.username.charAt(0).toUpperCase()}
+                  <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user.username.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <span className="text-indigo-600 dark:text-indigo-400 text-xs font-bold">{user.username}</span>
                 </Link>
