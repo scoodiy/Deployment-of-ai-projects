@@ -25,9 +25,9 @@ export interface SiteConfig {
 }
 
 const defaultConfig: SiteConfig = {
-  site_title: '云悠悠',
+  site_title: 'y悠悠',
   site_subtitle: '的宝藏之地',
-  hero_title: '欢迎来到云悠悠的宝藏之地',
+  hero_title: '欢迎来到y悠悠的宝藏之地',
   hero_subtitle: '代码、学术与生活的碎片记录',
   hero_background_image: '',
   announcement: '',

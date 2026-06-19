@@ -30,7 +30,7 @@ export default function MomentsPage() {
 
           allMoments.push({
             id: fileName.replace(/\.md$/, ''),
-            date: data.date || '1970-01-01',
+            date: data.date instanceof Date ? data.date.toISOString().split('T')[0] : (data.date || '1970-01-01'),
             location: data.location || '',
             images: data.images || [],
             content: content.trim()

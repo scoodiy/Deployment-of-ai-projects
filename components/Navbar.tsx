@@ -76,17 +76,16 @@ export default function Navbar() {
     { name: '首页', href: '/', show: true },
     { name: '工具', href: '/tools', show: dbConfig.show_tools },
     { name: '项目', href: '/projects', show: true },
-    { name: '归档', href: '/timeline', show: true },
+    { name: '文章', href: '/timeline', show: true },
     { name: '照片墙', href: '/photowall', show: true },
     { name: '音乐', href: '/music', show: dbConfig.show_music },
-    { name: '灵境', href: '/tree', show: true },
     { name: '说说', href: '/moments', show: true },
-    { name: '杂谈', href: '/chatter', show: true },
     { name: '友链', href: '/friends', show: true },
+    { name: '关于', href: '/about', show: true },
   ].filter(link => link.show);
 
   // 🌟 核心：过滤掉"灵境"和"工具"，专供手机端使用，保证圆盘自动重新均匀排布
-  const mobileNavLinks = navLinks.filter(link => link.href !== '/tree');
+  const mobileNavLinks = navLinks;
 
   return (
     <>
