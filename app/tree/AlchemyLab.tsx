@@ -182,7 +182,12 @@ const StickyNote = ({ note }: { note: any }) => {
 export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: any) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [mountTimeout, setMountTimeout] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => { if (!mounted) setMountTimeout(true); }, 5000);
+    return () => clearTimeout(t);
+  }, [mounted]);
   const [realWishes, setRealWishes] = useState<any[]>([]);
 
   // 控制图鉴面板的开关
@@ -428,7 +433,19 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     return { shelvesData: shelves, stickyNotes: computedNotes, stats: monthStats };
   }, [currentMonthStr, posts, chatters, moments, realWishes, mounted]);
 
-  if (!mounted) return <div className="min-h-[80vh] flex items-center justify-center text-[#8b6b4a]"><span className="animate-pulse">初始化中...</span></div>;
+  if (!mounted) {
+    if (mountTimeout) {
+      return (
+        <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 text-[#8b6b4a]">
+          <span>加载超时，请刷新页面重试</span>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 text-sm bg-[#8b6b4a]/10 hover:bg-[#8b6b4a]/20 rounded-lg transition-colors">
+            刷新页面
+          </button>
+        </div>
+      );
+    }
+    return <div className="min-h-[80vh] flex items-center justify-center text-[#8b6b4a]"><span className="animate-pulse">初始化中...</span></div>;
+  }
 
   return (
     <motion.div

@@ -14,7 +14,8 @@ export default function MusicClient() {
     isLoading, togglePlay, nextSong, prevSong, handleSeek,
     playSong, selectSong,
     playMode, togglePlayMode,
-    volume, setVolume, isMuted, toggleMute
+    volume, setVolume, isMuted, toggleMute,
+    retryFetch
   } = useMusic();
 
   const lyricContainerRef = useRef<HTMLDivElement>(null);
@@ -118,7 +119,7 @@ export default function MusicClient() {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
     if (isLoading) {
-      const t = setTimeout(() => setLoadingTimeout(true), 5000);
+      const t = setTimeout(() => setLoadingTimeout(true), 3000);
       return () => clearTimeout(t);
     }
     setLoadingTimeout(false);
@@ -131,6 +132,7 @@ export default function MusicClient() {
         <div className="flex-1 flex flex-col items-center justify-center animate-pulse gap-4">
           <Disc3 size={48} className="text-indigo-500 animate-spin" />
           <span className="font-black text-slate-500 tracking-widest text-sm">唤醒音频引擎中...</span>
+          <p className="text-xs text-slate-400">首次加载可能需要几秒钟</p>
         </div>
       </div>
     );
@@ -140,11 +142,25 @@ export default function MusicClient() {
     return (
       <div className="min-h-screen relative pb-32 flex flex-col">
         <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Disc3 size={48} className="text-slate-400" />
-          <span className="font-black text-slate-500 tracking-widest text-sm">暂无可用音源</span>
-          <p className="text-xs text-slate-400">请检查网络连接或播放列表配置</p>
-        </div>
+        <PageTransition>
+          <div className="w-full max-w-7xl mx-auto mt-24 md:mt-28 px-4 sm:px-6 md:px-10 relative z-10">
+            <div className="animate-fade-in-up mb-6 md:mb-10 text-center md:text-left">
+              <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-widest mb-1 md:mb-2">云端乐律</h1>
+              <p className="text-xs md:text-base text-slate-600 dark:text-slate-400 font-medium tracking-wider">在代码的缝隙中寻找灵魂的共鸣</p>
+            </div>
+            <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[32px] shadow-2xl">
+              <Disc3 size={48} className="text-slate-400" />
+              <span className="font-black text-slate-500 tracking-widest text-sm">暂无音乐</span>
+              <p className="text-xs text-slate-400">请在后台添加音乐数据，或检查网络连接</p>
+              <button
+                onClick={retryFetch}
+                className="mt-2 px-5 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-full transition-all border border-indigo-500/20"
+              >
+                重新加载
+              </button>
+            </div>
+          </div>
+        </PageTransition>
       </div>
     );
   }

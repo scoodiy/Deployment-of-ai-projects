@@ -16,7 +16,8 @@ export default function SiteConfigPage() {
   useEffect(() => {
     fetch("/api/admin/site-config")
       .then((res) => res.json())
-      .then((data) => setConfigs(data.configs));
+      .then((data) => setConfigs(data?.data?.configs || []))
+      .catch(() => setConfigs([]));
   }, []);
 
   const handleSave = async () => {
@@ -42,8 +43,34 @@ export default function SiteConfigPage() {
     setConfigs(configs.map((c) => c.config_key === key ? { ...c, config_value: value } : c));
   };
 
+  const handleImageUpload = async (key: string, file: File) => {
+    if (file.size > 10 * 1024 * 1024) { alert('文件超过10MB'); return; }
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        updateValue(key, data.url);
+      } else {
+        alert(data.error?.message || data.error || '上传失败');
+      }
+    } catch { alert('上传失败'); }
+  };
+
+  const isImageField = (key: string) => /image|avatar|background|bg|logo|cover|icon|photo/i.test(key);
+
   const toggleConfigs = configs.filter((c) => c.config_key.startsWith("show_"));
-  const otherConfigs = configs.filter((c) => !c.config_key.startsWith("show_"));
+  const otherConfigs = configs.filter((c) => !c.config_key.startsWith("show_") && c.config_key !== "danmaku_list");
+
+  // 弹幕管理
+  const danmakuRaw = configs.find(c => c.config_key === "danmaku_list")?.config_value || "[]";
+  let danmakuList: string[] = [];
+  try { danmakuList = JSON.parse(danmakuRaw); } catch {}
+
+  const updateDanmaku = (newList: string[]) => {
+    updateValue("danmaku_list", JSON.stringify(newList));
+  };
 
   return (
     <div className="space-y-6">
@@ -60,7 +87,35 @@ export default function SiteConfigPage() {
           {otherConfigs.map((config) => (
             <div key={config.config_key}>
               <label className="block text-gray-400 text-sm mb-1">{config.description || config.config_key}</label>
-              {config.config_value.length > 100 ? (
+              {isImageField(config.config_key) ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={config.config_value}
+                      onChange={(e) => updateValue(config.config_key, e.target.value)}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                      placeholder="https://... 或上传本地图片"
+                    />
+                    <label className="px-4 py-3 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 cursor-pointer transition-colors whitespace-nowrap">
+                      📤 上传
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(config.config_key, file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {config.config_value && (
+                    <img src={config.config_value} alt="" className="w-24 h-24 object-cover rounded-lg border border-white/10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                  )}
+                </div>
+              ) : config.config_value.length > 100 ? (
                 <textarea
                   value={config.config_value}
                   onChange={(e) => updateValue(config.config_key, e.target.value)}
@@ -98,6 +153,40 @@ export default function SiteConfigPage() {
               </div>
             </label>
           ))}
+        </div>
+      </div>
+
+      {/* 弹幕管理 */}
+      <div className="bg-black/30 backdrop-blur-xl rounded-xl border border-white/10 p-6">
+        <h3 className="text-white text-lg mb-4">🎯 弹幕管理</h3>
+        <div className="space-y-3">
+          {danmakuList.map((text, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <span className="text-gray-500 text-xs w-6">{idx + 1}</span>
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => {
+                  const newList = [...danmakuList];
+                  newList[idx] = e.target.value;
+                  updateDanmaku(newList);
+                }}
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+              />
+              <button
+                onClick={() => updateDanmaku(danmakuList.filter((_, i) => i !== idx))}
+                className="px-2 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => updateDanmaku([...danmakuList, '新弹幕内容'])}
+            className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 text-sm"
+          >
+            ＋ 添加弹幕
+          </button>
         </div>
       </div>
     </div>

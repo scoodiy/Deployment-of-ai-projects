@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { ToastProvider } from '../../components/admin/Toast';
 
 const menuItems = [
   { path: '/admin/dashboard', label: '仪表盘', icon: '📊' },
@@ -48,6 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
+    <ToastProvider>
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex">
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 bg-black/30 backdrop-blur-xl border-r border-white/10 flex flex-col`}>
@@ -120,5 +122,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

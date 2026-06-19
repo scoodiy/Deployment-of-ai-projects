@@ -58,6 +58,7 @@ interface MusicContextType {
   setVolume: (value: number) => void;
   toggleMute: () => void;
   togglePlayMode: () => void;
+  retryFetch: () => void;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -119,6 +120,54 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
     return () => { isMounted = false; controller.abort(); clearTimeout(timeoutId); };
   }, []);
+
+  // Retry function for manual re-fetch
+  const [retryCount, setRetryCount] = useState(0);
+  const retryFetch = () => {
+    setRetryCount(c => c + 1);
+  };
+
+  // Separate effect for retry
+  useEffect(() => {
+    if (retryCount === 0) return;
+    let isMounted = true;
+    setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const fetchMusicData = async () => {
+      try {
+        const res = await fetch(`/api/music?ids=${siteConfig.cloudMusicIds.join(',')}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rawResults = await res.json();
+        const mergedPlaylist = rawResults
+          .filter((song: any) => song && song.url && !song.error)
+          .map((song: any) => ({
+            id: song.id || Math.random().toString(),
+            title: song.name || '未知歌曲',
+            artist: song.artist || song.author || '未知歌手',
+            cover: song.cover || song.pic || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
+            src: song.url,
+            lrcUrl: null,
+            lyrics: song.lrc ? parseLrc(song.lrc) : []
+          }));
+        if (isMounted) {
+          if (mergedPlaylist.length > 0) setPlaylist(mergedPlaylist);
+          else setCurrentLyric("云端链路受阻");
+          setIsLoading(false);
+        }
+      } catch (error) {
+        if (isMounted) { setCurrentLyric("网络初始化失败"); setIsLoading(false); }
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    if (siteConfig.cloudMusicIds?.length > 0) fetchMusicData();
+    else { clearTimeout(timeoutId); setIsLoading(false); }
+
+    return () => { isMounted = false; controller.abort(); clearTimeout(timeoutId); };
+  }, [retryCount]);
 
   useEffect(() => {
     if (playlist.length === 0) return;
@@ -251,7 +300,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         playlist, currentIndex, currentSong, isPlaying, progress, currentTime, duration, currentLyric, isLoading,
         volume, isMuted, playMode, // 暴露新状态
         togglePlay, nextSong, prevSong, handleSeek,
-        playSong, setVolume, toggleMute, togglePlayMode // 暴露新方法
+        playSong, setVolume, toggleMute, togglePlayMode, // 暴露新方法
+        retryFetch // 重试
     }}>
       {children}
       {currentSong && (

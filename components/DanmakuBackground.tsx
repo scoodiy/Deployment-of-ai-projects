@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
+import { useSiteConfig } from './SiteConfigProvider';
 import { siteConfig } from '../siteConfig';
 
 interface DanmakuItem {
@@ -14,6 +15,7 @@ interface DanmakuItem {
 export default function DanmakuBackground() {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const dbConfig = useSiteConfig();
 
   useEffect(() => {
     setMounted(true);
@@ -23,27 +25,34 @@ export default function DanmakuBackground() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 使用 useMemo 生成稳定的弹幕数据，避免每次渲染重新生成
+  // 优先用数据库配置，fallback 到静态配置
+  const danmakuTexts = useMemo(() => {
+    try {
+      const parsed = JSON.parse(dbConfig.danmaku_list || '[]');
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+    return siteConfig.danmakuList || [];
+  }, [dbConfig.danmaku_list]);
+
+  // 使用 useMemo 生成稳定的弹幕数据
   const danmakus = useMemo<DanmakuItem[]>(() => {
-    const list = siteConfig.danmakuList || [];
-    if (list.length === 0) return [];
+    if (danmakuTexts.length === 0) return [];
 
     const generated: DanmakuItem[] = [];
-    const count = 15;
+    const count = Math.min(15, danmakuTexts.length * 2);
 
-    // 使用固定种子生成伪随机值，保证每次渲染结果一致
     for (let i = 0; i < count; i++) {
       const seed = i * 7 + 3;
       generated.push({
         id: i,
-        text: list[seed % list.length],
+        text: danmakuTexts[seed % danmakuTexts.length],
         top: ((seed * 13) % 80) + 10,
         duration: ((seed * 17) % 20) + 25,
         delay: ((seed * 11) % 20),
       });
     }
     return generated;
-  }, []);
+  }, [danmakuTexts]);
 
   // 移动端或未挂载时不渲染
   if (!mounted || isMobile) return null;

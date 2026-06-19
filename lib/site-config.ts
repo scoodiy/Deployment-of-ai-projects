@@ -21,6 +21,7 @@ export interface SiteConfig {
   email: string;
   bilibili_url: string;
   custom_links: string;
+  danmaku_list: string;
 }
 
 const defaultConfig: SiteConfig = {
@@ -44,6 +45,7 @@ const defaultConfig: SiteConfig = {
   email: '',
   bilibili_url: '',
   custom_links: '[]',
+  danmaku_list: '[]',
 };
 
 export function getSiteConfig(): SiteConfig {

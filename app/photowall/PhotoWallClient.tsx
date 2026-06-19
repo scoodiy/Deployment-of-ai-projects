@@ -5,6 +5,9 @@ import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { albums, Album } from '../../data/albums';
 
+// 只展示 published 相册
+const publishedAlbums = albums.filter(a => !a.status || a.status === 'published');
+
 export default function PhotoWallClient() {
   const [currentAlbum, setCurrentAlbum] = useState<Album | null>(null);
   const [selectedImage, setSelectedImage] = useState<{url: string, caption?: string} | null>(null);
@@ -25,14 +28,14 @@ export default function PhotoWallClient() {
   }, [searchQuery]);
 
   const { matchedAlbums, matchedPhotos } = useMemo(() => {
-    if (!activeQuery) return { matchedAlbums: albums, matchedPhotos: [] };
+    if (!activeQuery) return { matchedAlbums: publishedAlbums, matchedPhotos: [] };
 
-    const matchedAlbums = albums.filter(album =>
+    const matchedAlbums = publishedAlbums.filter(album =>
       album.title.toLowerCase().includes(activeQuery) ||
       album.description.toLowerCase().includes(activeQuery)
     );
 
-    const matchedPhotos = albums.flatMap(album =>
+    const matchedPhotos = publishedAlbums.flatMap(album =>
       album.photos.map(p => ({ ...p, albumName: album.title }))
     ).filter(photo => photo.caption?.toLowerCase().includes(activeQuery));
 

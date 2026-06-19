@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { siteConfig } from '../../siteConfig';
+import ReactMarkdown from 'react-markdown';
 
 interface ProfileData {
   name: string;
@@ -12,6 +13,7 @@ interface ProfileData {
   avatar: string;
   social: Record<string, string | undefined>;
   buildDate: string;
+  danmakuCount?: number;
 }
 
 export default function AboutClient({ profile }: { profile: ProfileData }) {
@@ -49,7 +51,9 @@ export default function AboutClient({ profile }: { profile: ProfileData }) {
               </div>
 
               <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight transition-colors duration-700">{profile.name}</h1>
-              <p className="text-base md:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-2xl transition-colors duration-700">{profile.bio}</p>
+              <div className="text-base md:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-2xl transition-colors duration-700 prose prose-slate dark:prose-invert prose-sm max-w-none">
+                <ReactMarkdown>{profile.bio}</ReactMarkdown>
+              </div>
 
               {/* 统计数据 */}
               <div className="flex flex-wrap gap-4 md:gap-6 mt-8">
@@ -62,7 +66,7 @@ export default function AboutClient({ profile }: { profile: ProfileData }) {
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">音轨</div>
                 </div>
                 <div className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-md rounded-2xl px-5 py-4 border border-white/40 dark:border-white/10 shadow-sm">
-                  <div className="text-2xl font-black text-pink-600 dark:text-pink-400">{siteConfig.danmakuList?.length || 0}</div>
+                  <div className="text-2xl font-black text-pink-600 dark:text-pink-400">{profile.danmakuCount ?? siteConfig.danmakuList?.length ?? 0}</div>
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">弹幕</div>
                 </div>
               </div>
@@ -77,6 +81,11 @@ export default function AboutClient({ profile }: { profile: ProfileData }) {
                 {profile.social?.gitee && (
                   <a href={profile.social.gitee} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 backdrop-blur-md rounded-full border border-white/40 dark:border-white/10 shadow-sm text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-500 hover:text-white transition-all">
                     Gitee
+                  </a>
+                )}
+                {profile.social?.bilibili && (
+                  <a href={profile.social.bilibili} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 backdrop-blur-md rounded-full border border-white/40 dark:border-white/10 shadow-sm text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-pink-500 hover:text-white transition-all">
+                    B站
                   </a>
                 )}
                 {profile.social?.qq && (

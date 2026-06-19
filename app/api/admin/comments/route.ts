@@ -1,35 +1,26 @@
-import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getAdminFromRequest } from '@/lib/auth/utils';
+import { withAdminAuth } from '@/lib/auth/with-admin-auth';
+import { apiSuccess } from '@/lib/api/response';
 
-// GET /api/admin/comments?status=approved
-export async function GET(request: Request) {
-  const admin = await getAdminFromRequest(request);
-  if (!admin) {
-    return NextResponse.json({ error: '未登录' }, { status: 401 });
-  }
-
+export const GET = withAdminAuth(async (request) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
 
   const db = getDb();
-  let comments;
+  let query = `
+    SELECT c.*, u.nickname, u.avatar, u.username
+    FROM comments c
+    LEFT JOIN users u ON c.user_id = u.id
+  `;
+  const params: string[] = [];
+
   if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-    comments = db.prepare(`
-      SELECT c.*, u.nickname, u.avatar, u.username
-      FROM comments c
-      LEFT JOIN users u ON c.user_id = u.id
-      WHERE c.status = ?
-      ORDER BY c.created_at DESC
-    `).all(status);
-  } else {
-    comments = db.prepare(`
-      SELECT c.*, u.nickname, u.avatar, u.username
-      FROM comments c
-      LEFT JOIN users u ON c.user_id = u.id
-      ORDER BY c.created_at DESC
-    `).all();
+    query += ' WHERE c.status = ?';
+    params.push(status);
   }
 
-  return NextResponse.json({ comments });
-}
+  query += ' ORDER BY c.created_at DESC';
+  const comments = db.prepare(query).all(...params);
+
+  return apiSuccess({ comments });
+});

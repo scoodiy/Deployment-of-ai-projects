@@ -1,10 +1,15 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { siteConfig } from '../siteConfig';
+import { useSiteConfig } from './SiteConfigProvider';
 
 export default function BackgroundSlider() {
   const [index, setIndex] = useState(0);
-  const images = siteConfig.bgImages;
+  const dbConfig = useSiteConfig();
+  // 如果数据库配置了 hero_background_image，优先使用；否则用静态配置
+  const images = dbConfig.hero_background_image
+    ? [dbConfig.hero_background_image]
+    : siteConfig.bgImages;
 
   useEffect(() => {
     if (images.length <= 1) return;

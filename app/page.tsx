@@ -65,9 +65,10 @@ export default function Home() {
   } catch (e) {}
   const top5Chatters = allChatters.length > 0 ? allChatters.slice(0, 5) : [{ slug: 'none', title: '暂无记录', description: '记录一段思绪...', cover: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop', date: '', formattedDate: '' }];
 
+  const publishedAlbums = albums.filter(a => !a.status || a.status === 'published');
   const chatterCount = allChatters.length;
-  const realPhotoCount = albums.reduce((total, album) => total + album.photos.length, 0);
-  const latestAlbum = albums.length > 0 ? albums[0] : { id: '', title: '照片墙', description: '查看摄影', cover: siteConfig.photoWallImage, date: '' };
+  const realPhotoCount = publishedAlbums.reduce((total, album) => total + album.photos.length, 0);
+  const latestAlbum = publishedAlbums.length > 0 ? publishedAlbums[0] : { id: '', title: '照片墙', description: '查看摄影', cover: siteConfig.photoWallImage, date: '' };
 
   return (
     <ToastProvider>
@@ -78,6 +79,16 @@ export default function Home() {
             <SearchBar posts={allPosts} />
 
             <main className="flex flex-col gap-6 w-full">
+              {/* 公告栏 */}
+              {dbConfig.show_announcement && dbConfig.announcement && (
+                <div className="w-full px-5 py-3 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-300/30 dark:border-amber-500/20 backdrop-blur-md">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-500 text-sm">📢</span>
+                    <p className="text-sm text-amber-800 dark:text-amber-200">{dbConfig.announcement}</p>
+                  </div>
+                </div>
+              )}
+
               {/* 第一行：个人信息 + 播放器 */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 w-full items-stretch">
                 <div className="md:col-span-7 flex">

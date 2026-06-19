@@ -52,7 +52,7 @@ export default function LoginPage() {
           setMode('login');
         }
       } else {
-        setError(data.error || '操作失败');
+        setError(typeof data.error === 'object' ? data.error?.message || '操作失败' : data.error || '操作失败');
       }
     } catch {
       setError('网络错误');

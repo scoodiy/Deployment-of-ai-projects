@@ -2,9 +2,18 @@ import { SignJWT, jwtVerify } from 'jose';
 import bcryptjs from 'bcryptjs';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'ayuu-fun-admin-secret-key-2026'
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable is required in production');
+    }
+    return new TextEncoder().encode('dev-secret-key-not-for-production');
+  }
+  return new TextEncoder().encode(secret);
+}
+
+const JWT_SECRET = getJwtSecret();
 
 const TOKEN_NAME = 'admin_token';
 const TOKEN_EXPIRY = '7d';
@@ -61,7 +70,8 @@ export async function getAdminFromRequest(request: Request): Promise<Record<stri
 }
 
 export function setTokenCookie(token: string): string {
-  return `${TOKEN_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`;
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${TOKEN_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${7 * 24 * 60 * 60}`;
 }
 
 export function clearTokenCookie(): string {

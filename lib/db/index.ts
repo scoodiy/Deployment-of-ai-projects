@@ -100,6 +100,32 @@ function initTables(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_music_enabled ON music(is_enabled);
     CREATE INDEX IF NOT EXISTS idx_operation_logs_admin ON operation_logs(admin_id);
     CREATE INDEX IF NOT EXISTS idx_site_config_key ON site_config(config_key);
+
+    CREATE TABLE IF NOT EXISTS login_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL DEFAULT '',
+      ip TEXT DEFAULT '',
+      user_agent TEXT DEFAULT '',
+      success INTEGER DEFAULT 0,
+      fail_reason TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_login_logs_username ON login_logs(username);
+    CREATE INDEX IF NOT EXISTS idx_login_logs_ip ON login_logs(ip);
+    CREATE INDEX IF NOT EXISTS idx_login_logs_created ON login_logs(created_at);
+
+    CREATE TABLE IF NOT EXISTS ai_usage_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      model TEXT DEFAULT '',
+      prompt TEXT DEFAULT '',
+      response_preview TEXT DEFAULT '',
+      tokens_used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_created ON ai_usage_logs(created_at);
   `);
 
   // ---- 并发控制：version 字段 ----
@@ -199,11 +225,13 @@ function initTables(db: Database.Database) {
   db.exec("CREATE TABLE IF NOT EXISTS user_ai_quota (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, date TEXT NOT NULL, used_count INTEGER DEFAULT 0, daily_limit INTEGER DEFAULT 10, UNIQUE(user_id, date), FOREIGN KEY (user_id) REFERENCES users(id))");
   db.exec("CREATE INDEX IF NOT EXISTS idx_ai_quota_user_date ON user_ai_quota(user_id, date)");
 
-  // Seed default admin if not exists
-  const admin = db.prepare('SELECT id FROM admins WHERE username = ?').get('admin');
-  if (!admin) {
-    const hash = bcryptjs.hashSync('admin123', 10);
-    db.prepare('INSERT INTO admins (username, password_hash, nickname, role) VALUES (?, ?, ?, ?)').run('admin', hash, '管理员', 'admin');
+  // Seed admin from environment variables (no hardcoded defaults)
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const admin = db.prepare('SELECT id FROM admins WHERE username = ?').get(adminUsername || '');
+  if (!admin && adminUsername && adminPassword) {
+    const hash = bcryptjs.hashSync(adminPassword, 10);
+    db.prepare('INSERT INTO admins (username, password_hash, nickname, role) VALUES (?, ?, ?, ?)').run(adminUsername, hash, '管理员', 'admin');
   }
 
   // Seed default site config

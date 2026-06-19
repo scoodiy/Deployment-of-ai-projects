@@ -1,95 +1,88 @@
-# Stock-AYUU 股票数据分析与可视化平台
+# y悠悠の宝藏之地
 
-> 本网站仅用于股票数据分析、策略研究和回测展示，不构成任何投资建议，不提供自动交易或委托下单服务。
+> 个人博客 & 创意空间 — ayuu.fun
+
+一个基于 Next.js 构建的全功能个人博客平台，集成了文章管理、音乐播放、照片墙、留言板、友链、项目展示等模块。
 
 ## 功能特性
 
-- 📊 市场概览仪表盘
-- 📈 股票列表与搜索
-- 🔍 个股详情 (K线/技术指标/K线形态/筹码分布)
-- 🎯 综合选股 (200+条件组合)
-- 📋 策略选股 (10种内置策略)
-- 📉 回测验证
-- ⭐ 关注列表
-- ⚙️ 系统状态
+- 📝 **博客系统** — 文章发布、分类标签、富文本编辑器（TipTap）、评论互动
+- 🎵 **音乐播放器** — 云音乐集成、歌词显示、浮动播放器
+- 📷 **照片墙** — 图片瀑布流展示、上传管理
+- 💬 **留言板（Chatter）** — 弹幕背景、实时互动
+- 🌳 **树洞（Tree）** — 匿名心情分享
+- 👥 **友链** — 友情链接管理
+- 🛠 **工具箱** — 天气查询等实用小工具
+- 🔐 **后台管理** — 博客/评论/用户/图片/音乐/站点配置/标签/项目/日志 全方位管理
+- 🎨 **视觉效果** — 背景轮播、樱花/雪花粒子、萤火虫、页面切换动画、弹幕背景
+- 📱 **响应式设计** — 移动端适配
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | React 18, TypeScript, Vite, Tailwind CSS, ECharts |
-| 后端 | Python 3.11, FastAPI, SQLAlchemy |
-| 数据库 | MySQL 8.0 |
-| 部署 | Docker, Nginx, HTTPS |
-
-## 快速开始
-
-### 开发环境
-
-```bash
-# 克隆项目
-git clone https://github.com/your-username/stock-ayuu.git
-cd stock-ayuu
-
-# 复制环境配置
-cp .env.example .env
-# 编辑 .env 填入数据库等配置
-
-# 启动后端
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 9988
-
-# 启动前端
-cd frontend
-npm install
-npm run dev
-```
-
-### Docker 部署
-
-```bash
-# 构建并启动
-docker-compose -f deploy/docker-compose.yml up -d
-
-# 查看日志
-docker-compose -f deploy/docker-compose.yml logs -f
-```
-
-## 部署到 ayuu.fun
-
-详见 [README_DEPLOY.md](README_DEPLOY.md)
+| 框架 | Next.js 15 (App Router) |
+| 语言 | TypeScript |
+| 样式 | Tailwind CSS |
+| 编辑器 | TipTap |
+| 3D | Three.js / React Three Fiber |
+| 数据库 | SQLite (better-sqlite3) |
+| 部署 | PM2 + Nginx |
 
 ## 项目结构
 
 ```
-stock-ayuu/
-├── backend/          # FastAPI 后端
-│   ├── app/
-│   │   ├── api/      # REST API 路由
-│   │   ├── services/ # 业务逻辑
-│   │   ├── models/   # 数据模型
-│   │   └── database/ # 数据库连接
-│   └── requirements.txt
-├── frontend/         # React 前端
-│   ├── src/
-│   │   ├── pages/    # 页面组件
-│   │   ├── components/ # 通用组件
-│   │   └── charts/   # ECharts 图表
-│   └── package.json
-├── deploy/           # 部署配置
-│   ├── nginx.conf
-│   └── docker-compose.yml
-└── README.md
+├── app/                # Next.js App Router 页面
+│   ├── admin/          # 后台管理页面
+│   ├── api/            # API 路由
+│   ├── about/          # 关于页
+│   ├── chatter/        # 留言板
+│   ├── friends/        # 友链
+│   ├── login/          # 登录/注册
+│   ├── moments/        # 动态
+│   ├── music/          # 音乐页
+│   ├── photowall/      # 照片墙
+│   ├── posts/          # 博客文章
+│   ├── projects/       # 项目展示
+│   ├── timeline/       # 时间线
+│   ├── tools/          # 工具箱
+│   └── tree/           # 树洞
+├── components/         # 通用组件
+├── lib/                # 工具库（数据库、认证、存储、API）
+├── data/               # 静态数据 & SQLite 数据库
+├── public/             # 静态资源
+└── siteConfig.ts       # 全站配置中心
 ```
 
-## 安全声明
+## 快速开始
 
-- ✅ 本项目**不支持**任何自动交易功能
-- ✅ 不接入券商客户端
-- ✅ 不保存任何交易账号密码
-- ✅ 不提供买入、卖出、撤单、打新功能
-- ✅ 仅提供数据分析、策略研究和回测展示
+```bash
+# 克隆项目
+git clone git@github.com:scoodiy/Deployment-of-ai-projects.git
+cd Deployment-of-ai-projects
+
+# 安装依赖
+npm install
+
+# 复制环境配置
+cp .env.example .env
+# 编辑 .env 填入配置
+
+# 开发模式
+npm run dev
+
+# 构建 & 启动
+npm run build
+npm start
+```
+
+## 环境变量
+
+参考 `.env.example` 配置以下变量：
+
+- `ADMIN_PASSWORD` — 管理员密码
+- `JWT_SECRET` — JWT 签名密钥
+- 其他可选配置见 `.env.example`
 
 ## License
 

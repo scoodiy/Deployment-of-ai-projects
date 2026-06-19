@@ -9,6 +9,13 @@ venv/
 dist/
 build/
 *.egg-info/
+.next/
+
+# Data & uploads
+data/*.db
+data/*.db-shm
+data/*.db-wal
+public/uploads/
 
 # Environment
 .env

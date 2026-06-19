@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import BackButton from '../../components/BackButton';
 import SiteComments from '../../components/SiteComments';
+import LoadingState from '../../components/LoadingState';
+import ErrorState from '../../components/ErrorState';
 import { siteConfig } from '../../siteConfig';
 
 interface Friend {
@@ -33,16 +35,20 @@ export default function FriendsBoard() {
   const [isCopied, setIsCopied] = useState(false);
   const [friendsData, setFriendsData] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const applyFormat = siteConfig.friendLinkApplyFormat;
 
-  useEffect(() => {
+  const fetchFriends = () => {
+    setLoading(true);
+    setError(false);
     fetch('/api/friends')
       .then(res => res.json())
-      .then(data => setFriendsData(data.friends || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+      .then(data => { setFriendsData(data.friends || []); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchFriends(); }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(applyFormat);
@@ -69,10 +75,9 @@ export default function FriendsBoard() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-          <span className="ml-3 text-sm text-slate-500 font-serif">加载中...</span>
-        </div>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={fetchFriends} />
       ) : (
       <motion.div
         variants={containerVariants}

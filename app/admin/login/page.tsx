@@ -25,7 +25,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || '登录失败');
+        setError(typeof data.error === 'object' ? data.error?.message || '登录失败' : data.error || '登录失败');
         return;
       }
 

@@ -84,11 +84,12 @@ export default function UsersPage() {
     try {
       const res = await fetch(`/api/admin/users?${params}`);
       const data = await res.json();
-      setUsers(data.users);
-      setTotalPages(data.pagination.totalPages);
-      setTotal(data.pagination.total);
+      setUsers(data?.data?.users || []);
+      setTotalPages(data?.data?.pagination?.totalPages || 1);
+      setTotal(data?.data?.pagination?.total || 0);
     } catch {
       console.error('Failed to load users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }

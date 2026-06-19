@@ -1,14 +1,15 @@
 // 🛡️ 本文件由 y悠悠 控制台自动生成，请勿手动修改
 export interface Photo { url: string; caption?: string; }
-export interface Album { id: string; title: string; description: string; cover: string; date: string; photos: Photo[]; }
+export interface Album { id: string; title: string; description: string; cover: string; date: string; status?: 'published' | 'draft' | 'hidden'; photos: Photo[]; }
 
 export const albums: Album[] = [
   {
     "id": "terra-journey",
     "title": "泰拉大陆纪行",
-    "description": "关于源石、孤星与前文明的视觉记录（测试用相册）",
+    "description": "关于源石、孤星与前文明的视觉记录",
     "cover": "https://bu.dusays.com/2026/03/24/69c24230de927.jpg",
     "date": "2026.01",
+    "status": "draft",
     "photos": [
       {
         "url": "https://bu.dusays.com/2026/03/31/69cb69bb530d8.jpg",
@@ -23,9 +24,10 @@ export const albums: Album[] = [
   {
     "id": "history-tour",
     "title": "唐宋历史巡游",
-    "description": "寻访千年前的长安与汴梁遗迹（测试用相册）",
+    "description": "寻访千年前的长安与汴梁遗迹",
     "cover": "https://bu.dusays.com/2026/03/24/69c24230a4efe.jpg",
     "date": "2025.10",
+    "status": "draft",
     "photos": [
       {
         "url": "https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg",

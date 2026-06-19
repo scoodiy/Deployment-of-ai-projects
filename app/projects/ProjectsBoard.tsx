@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '../../components/BackButton';
+import LoadingState from '../../components/LoadingState';
+import ErrorState from '../../components/ErrorState';
 
 interface Project {
   id: number;
@@ -17,14 +19,18 @@ export default function ProjectsBoard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchProjects = () => {
+    setLoading(true);
+    setError(false);
     fetch('/api/projects')
       .then(res => res.json())
-      .then(data => setProjectsData(data.projects || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+      .then(data => { setProjectsData(data.projects || []); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
+
+  useEffect(() => { fetchProjects(); }, []);
 
   // 搜索过滤逻辑
   const filteredProjects = useMemo(() => {
@@ -78,10 +84,9 @@ export default function ProjectsBoard() {
 
       {/* 矩阵展示区：CSS Grid 布局 */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-          <span className="ml-3 text-sm text-slate-500 font-serif">加载中...</span>
-        </div>
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={fetchProjects} />
       ) : (
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 relative">
         <AnimatePresence>

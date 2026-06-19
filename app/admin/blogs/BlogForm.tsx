@@ -62,7 +62,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
         router.push("/admin/blogs");
       } else {
         const data = await res.json();
-        alert(data.error || "保存失败");
+        alert(data.error?.message || data.error || "保存失败");
       }
     } catch {
       alert("保存失败");
@@ -79,6 +79,18 @@ export default function BlogForm({ blogId }: BlogFormProps) {
     setForm({ ...form, slug });
   };
 
+  // Auto-generate slug from title when creating new blog and slug is empty
+  const handleTitleChange = (title: string) => {
+    setForm(prev => {
+      // Only auto-generate if slug is empty or was auto-generated before
+      if (!prev.slug || prev.slug === prev.title.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, "")) {
+        const autoSlug = title.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, "-").replace(/^-+|-+$/g, "");
+        return { ...prev, title, slug: autoSlug };
+      }
+      return { ...prev, title };
+    });
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -88,7 +100,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
             <input
               type="text"
               value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              onChange={(e) => handleTitleChange(e.target.value)}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
               required
             />
@@ -130,14 +142,46 @@ export default function BlogForm({ blogId }: BlogFormProps) {
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm mb-2">封面图 URL</label>
-            <input
-              type="text"
-              value={form.cover_image}
-              onChange={(e) => setForm({ ...form, cover_image: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
-              placeholder="https://..."
-            />
+            <label className="block text-gray-300 text-sm mb-2">封面图</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.cover_image}
+                onChange={(e) => setForm({ ...form, cover_image: e.target.value })}
+                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                placeholder="https://... 或上传本地图片"
+              />
+              <label className="px-4 py-3 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 cursor-pointer transition-colors whitespace-nowrap">
+                📤 上传
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) { alert('文件超过10MB'); return; }
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                      const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
+                      const data = await res.json();
+                      if (res.ok && data.url) {
+                        setForm(prev => ({ ...prev, cover_image: data.url }));
+                      } else {
+                        alert(data.error?.message || data.error || '上传失败');
+                      }
+                    } catch { alert('上传失败'); }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+            {form.cover_image && (
+              <div className="mt-2 relative w-full max-w-xs">
+                <img src={form.cover_image} alt="封面预览" className="w-full h-32 object-cover rounded-lg border border-white/10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+              </div>
+            )}
           </div>
 
           <div>

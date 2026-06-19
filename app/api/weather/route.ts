@@ -20,7 +20,26 @@ export async function GET(req: NextRequest) {
   const city = searchParams.get('city') || '北京';
 
   try {
-    const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
+    // 支持坐标格式: "lat,lon"
+    let queryCity = city;
+    let resolvedCity = city;
+    const coordMatch = city.match(/^(-?\d+\.?\d*),(-?\d+\.?\d*)$/);
+    if (coordMatch) {
+      // 坐标模式：用 wttr.in 坐标查询，并尝试反向解析城市名
+      queryCity = `${coordMatch[1]},${coordMatch[2]}`;
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${coordMatch[1]}&lon=${coordMatch[2]}&format=json&accept-language=zh-CN`,
+          { headers: { 'User-Agent': 'ayuu.fun/1.0' } }
+        );
+        const geoData = await geoRes.json();
+        resolvedCity = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || city;
+      } catch {
+        resolvedCity = city;
+      }
+    }
+
+    const url = `https://wttr.in/${encodeURIComponent(queryCity)}?format=j1`;
     const res = await fetch(url, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'curl/7.81.0' },
       cache: 'no-store',
@@ -34,7 +53,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         code: "200",
-        city: city,
+        city: resolvedCity,
         now: {
           temp: cur.temp_C,
           feelsLike: cur.FeelsLikeC,

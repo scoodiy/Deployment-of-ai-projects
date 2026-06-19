@@ -13,7 +13,7 @@ export default function AboutPage() {
       .then((res) => res.json())
       .then((data) => {
         const map: Record<string, string> = {};
-        data.configs.forEach((c: { config_key: string; config_value: string }) => {
+        (data.data?.configs || data.configs || []).forEach((c: { config_key: string; config_value: string }) => {
           if (aboutKeys.includes(c.config_key)) {
             map[c.config_key] = c.config_value;
           }
@@ -72,14 +72,38 @@ export default function AboutPage() {
         </div>
 
         <div>
-          <label className="block text-gray-300 text-sm mb-2">头像 URL</label>
-          <input
-            type="text"
-            value={configs.avatar_url || ""}
-            onChange={(e) => updateValue("avatar_url", e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
-            placeholder="https://..."
-          />
+          <label className="block text-gray-300 text-sm mb-2">头像</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={configs.avatar_url || ""}
+              onChange={(e) => updateValue("avatar_url", e.target.value)}
+              className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              placeholder="https://... 或上传本地图片"
+            />
+            <label className="px-4 py-3 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 cursor-pointer transition-colors whitespace-nowrap">
+              📤 上传
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 10 * 1024 * 1024) { alert('文件超过10MB'); return; }
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  try {
+                    const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (res.ok && data.url) updateValue("avatar_url", data.url);
+                    else alert(data.error?.message || '上传失败');
+                  } catch { alert('上传失败'); }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
           {configs.avatar_url && (
             <img src={configs.avatar_url} alt="avatar" className="w-20 h-20 rounded-full mt-2 object-cover border-2 border-purple-500/50" />
           )}

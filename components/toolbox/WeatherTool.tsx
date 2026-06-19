@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cloud, Sun, CloudRain, Snowflake, CloudLightning, Loader2, Wind, Droplets, Eye, Thermometer } from 'lucide-react';
+import { Cloud, Sun, CloudRain, Snowflake, CloudLightning, Loader2, Wind, Droplets, Eye, Thermometer, MapPin } from 'lucide-react';
 
 interface WeatherData {
   city: string;
@@ -20,6 +20,7 @@ interface WeatherData {
 export default function WeatherTool() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(false);
   const [city, setCity] = useState('北京');
 
   const fetchWeather = async (location: string = '北京') => {
@@ -85,6 +86,27 @@ export default function WeatherTool() {
     if (e.key === 'Enter') handleSearch();
   };
 
+  const handleLocate = () => {
+    if (!navigator.geolocation) {
+      alert('浏览器不支持定位功能');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = `${pos.coords.latitude},${pos.coords.longitude}`;
+        setCity('');
+        fetchWeather(loc).finally(() => setLocating(false));
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === 1) alert('请允许获取位置权限');
+        else alert('定位失败，请手动输入城市');
+      },
+      { timeout: 10000, maximumAge: 300000 }
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -101,6 +123,14 @@ export default function WeatherTool() {
           placeholder="输入城市名"
           className="flex-1 px-3 py-2 text-xs rounded-xl bg-white/60 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors"
         />
+        <button
+          onClick={handleLocate}
+          disabled={locating}
+          className="px-2.5 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 disabled:opacity-40 transition-all active:scale-95 shadow-sm"
+          title="定位当前位置"
+        >
+          {locating ? <Loader2 className="animate-spin" size={14} /> : <MapPin size={14} />}
+        </button>
         <button
           onClick={handleSearch}
           disabled={loading}
