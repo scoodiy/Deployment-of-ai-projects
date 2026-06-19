@@ -37,3 +37,9 @@ docker-compose.override.yml
 
 # Logs
 *.log
+
+# Temp files
+.claude/
+OPTIMIZATION-PLAN.md
+TASK-PROMPT.md
+
