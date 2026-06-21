@@ -5,6 +5,8 @@ import { rateLimitMiddleware, getClientIp } from '@/lib/rate-limit';
 import { writeFile, mkdir, unlink } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import Busboy from 'busboy';
+import { Readable } from 'stream';
 
 const ALLOWED_TYPES: Record<string, string[]> = {
   image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
@@ -27,6 +29,62 @@ function getFileCategory(mimeType: string): string {
   return 'document';
 }
 
+/** 用 busboy 解析 multipart/form-data（绕过 Next.js 16 formData bug） */
+function parseMultipart(request: Request): Promise<{ file: Buffer; filename: string; mimeType: string; usageType: string }> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const contentType = request.headers.get('content-type') || '';
+      const arrayBuffer = await request.arrayBuffer();
+      const bodyBuffer = Buffer.from(arrayBuffer);
+
+      // 将 Buffer 转为 Node Readable stream
+      const readable = new Readable({
+        read() {
+          this.push(bodyBuffer);
+          this.push(null);
+        },
+      });
+
+      // 模拟 Node IncomingMessage headers
+      (readable as any).headers = {};
+      request.headers.forEach((value, key) => {
+        (readable as any).headers[key.toLowerCase()] = value;
+      });
+
+      const bb = Busboy({ headers: (readable as any).headers, limits: { fileSize: 50 * 1024 * 1024 } });
+      let fileBuffer: Buffer | null = null;
+      let filename = '';
+      let mimeType = '';
+      let usageType = 'other';
+      const chunks: Buffer[] = [];
+
+      bb.on('file', (fieldname, fileStream, info) => {
+        filename = info.filename || 'unknown';
+        mimeType = info.mimeType || 'application/octet-stream';
+        fileStream.on('data', (data: Buffer) => chunks.push(data));
+        fileStream.on('end', () => { fileBuffer = Buffer.concat(chunks); });
+      });
+
+      bb.on('field', (name, value) => {
+        if (name === 'usage_type') usageType = value;
+      });
+
+      bb.on('close', () => {
+        if (!fileBuffer) {
+          reject(new Error('请选择文件'));
+        } else {
+          resolve({ file: fileBuffer, filename, mimeType, usageType });
+        }
+      });
+
+      bb.on('error', (err) => reject(err));
+      readable.pipe(bb);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 export async function POST(request: Request) {
   const admin = await getAdminFromRequest(request);
   if (!admin) {
@@ -43,44 +101,37 @@ export async function POST(request: Request) {
   let filePath: string | null = null;
 
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const usageType = (formData.get('usage_type') as string) || 'other';
-
-    if (!file) {
-      return NextResponse.json({ error: '请选择文件' }, { status: 400 });
-    }
+    const { file, filename: origFilename, mimeType, usageType } = await parseMultipart(request);
 
     // 文件类型验证
-    const category = getFileCategory(file.type);
+    const category = getFileCategory(mimeType);
     const allowedMimes = ALLOWED_TYPES[category] || [];
-    if (!allowedMimes.includes(file.type)) {
+    if (!allowedMimes.includes(mimeType)) {
       return NextResponse.json({
-        error: `不支持的文件类型: ${file.type}。支持: ${allowedMimes.join(', ')}`,
+        error: `不支持的文件类型: ${mimeType}。支持: ${allowedMimes.join(', ')}`,
       }, { status: 400 });
     }
 
     // 文件大小验证
     const maxSize = MAX_SIZE[category] || 10 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.length > maxSize) {
       return NextResponse.json({
         error: `文件大小超过限制(${Math.round(maxSize / 1024 / 1024)}MB)`,
       }, { status: 400 });
     }
 
     // UUID文件名（避免并发冲突和文件名注入）
-    const ext = path.extname(file.name).toLowerCase();
+    const ext = path.extname(origFilename).toLowerCase();
     const safeExt = ext.replace(/[^a-z0-9.]/g, '');
     const filename = `${randomUUID()}${safeExt}`;
     const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
     await mkdir(uploadDir, { recursive: true });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
     filePath = path.join(uploadDir, filename);
 
     // 先写文件
-    await writeFile(filePath, buffer);
+    await writeFile(filePath, file);
 
     // 再写数据库（如果DB写入失败，清理文件）
     const db = getDb();
@@ -88,12 +139,12 @@ export async function POST(request: Request) {
       const result = db.prepare(`
         INSERT INTO media_files (file_type, filename, original_name, url, size, mime_type, usage_type, user_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(category, filename, file.name, `/uploads/${filename}`, file.size, file.type, usageType, admin.adminId);
+      `).run(category, filename, origFilename, `/uploads/${filename}`, file.length, mimeType, usageType, admin.adminId);
 
       // 操作日志
       db.prepare('INSERT INTO operation_logs (admin_id, action, target_type, target_id, detail, ip) VALUES (?, ?, ?, ?, ?, ?)').run(
         admin.adminId, 'upload', 'media', result.lastInsertRowid,
-        `上传文件: ${file.name} (${category}, ${Math.round(file.size / 1024)}KB)`,
+        `上传文件: ${origFilename} (${category}, ${Math.round(file.length / 1024)}KB)`,
         ip
       );
 
@@ -110,8 +161,8 @@ export async function POST(request: Request) {
       }
       throw dbError;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: '上传失败' }, { status: 500 });
+    return NextResponse.json({ error: error.message || '上传失败' }, { status: 500 });
   }
 }

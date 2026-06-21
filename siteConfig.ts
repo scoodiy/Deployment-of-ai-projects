@@ -22,7 +22,7 @@ export const siteConfig = {
   useGradient: false,
   themeColors: ["#a18cd1", "#fbc2eb", "#a1c4fd", "#c2e9fb"], // 呼吸流动的颜色组合
 // 修改这里：变成图片数组
-  bgImages: ["/bg/1.jpg", "/bg/2.jpg", "/bg/3.jpg", "/bg/4.jpg", "/bg/5.jpg", "/bg/6.jpg", "/bg/7.jpg", "/bg/8.jpg", "/bg/9.jpg", "/bg/10.jpg"],
+  bgImages: ["/bg/1.jpg", "/bg/2.jpg", "/bg/3.jpg", "/bg/4.jpg", "/bg/5.jpg", "/bg/6.jpg", "/bg/7.png", "/bg/8.jpg", "/bg/9.jpg", "/bg/10.png"],
 
   // 4. 文章默认封面图 (请将你的默认封面图命名为 default-cover.jpg 放在 /public/images 文件夹)
   defaultPostCover: "https://bu.dusays.com/2026/03/24/69c1e393a0b3e.jpg",

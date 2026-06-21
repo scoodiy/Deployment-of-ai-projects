@@ -2,18 +2,21 @@ import { SignJWT, jwtVerify } from 'jose';
 import bcryptjs from 'bcryptjs';
 import { cookies } from 'next/headers';
 
+let _jwtSecret: Uint8Array | null = null;
+
 function getJwtSecret(): Uint8Array {
+  if (_jwtSecret) return _jwtSecret;
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('FATAL: JWT_SECRET environment variable is required in production');
     }
-    return new TextEncoder().encode('dev-secret-key-not-for-production');
+    _jwtSecret = new TextEncoder().encode('dev-secret-key-not-for-production');
+  } else {
+    _jwtSecret = new TextEncoder().encode(secret);
   }
-  return new TextEncoder().encode(secret);
+  return _jwtSecret;
 }
-
-const JWT_SECRET = getJwtSecret();
 
 const TOKEN_NAME = 'admin_token';
 const TOKEN_EXPIRY = '7d';
@@ -31,12 +34,12 @@ export async function createToken(payload: Record<string, unknown>): Promise<str
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(TOKEN_EXPIRY)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<Record<string, unknown> | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as Record<string, unknown>;
   } catch {
     return null;

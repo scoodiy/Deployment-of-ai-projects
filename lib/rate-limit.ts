@@ -55,6 +55,12 @@ export const RATE_LIMITS = {
     keyPrefix: 'rl:code',
     errorMessage: '验证码发送过于频繁，请稍后再试',
   },
+  reset_password: {
+    maxRequests: 5,
+    windowSeconds: 300,
+    keyPrefix: 'rl:reset',
+    errorMessage: '密码重置请求过于频繁，请5分钟后再试',
+  },
   comment: {
     maxRequests: 3,
     windowSeconds: 60,

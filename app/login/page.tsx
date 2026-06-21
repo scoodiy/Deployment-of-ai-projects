@@ -5,14 +5,59 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
 
+type Mode = 'login' | 'register' | 'reset';
+
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useUser();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [mode, setMode] = useState<Mode>('login');
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '', code: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [codeSending, setCodeSending] = useState(false);
+  const [codeCountdown, setCodeCountdown] = useState(0);
+
+  const startCountdown = () => {
+    setCodeCountdown(60);
+    const timer = setInterval(() => {
+      setCodeCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const sendCode = async () => {
+    if (!form.email) {
+      setError('请先输入邮箱');
+      return;
+    }
+    setCodeSending(true);
+    setError('');
+    try {
+      const type = mode === 'reset' ? 'reset_password' : 'register';
+      const res = await fetch('/api/user/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, type }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess('验证码已发送到您的邮箱');
+        startCountdown();
+      } else {
+        setError(data.error || '发送失败');
+      }
+    } catch {
+      setError('网络错误');
+    } finally {
+      setCodeSending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,32 +72,49 @@ export default function LoginPage() {
     }
 
     try {
-      const endpoint = mode === 'login' ? '/api/user/login' : '/api/user/register';
-      const body = mode === 'login'
-        ? { email: form.email, password: form.password }
-        : { username: form.username, email: form.email, password: form.password };
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        if (mode === 'login') {
-          setUser({
-            username: data.user.username,
-            email: data.user.email,
-            avatar: data.user.avatar || '',
-          });
-          router.push('/');
+      if (mode === 'reset') {
+        // Password reset flow
+        const res = await fetch('/api/user/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email, code: form.code, new_password: form.password }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setSuccess('密码重置成功，请重新登录');
+          setTimeout(() => setMode('login'), 2000);
         } else {
-          setSuccess('注册成功，请登录');
-          setMode('login');
+          setError(data.error || '重置失败');
         }
       } else {
-        setError(typeof data.error === 'object' ? data.error?.message || '操作失败' : data.error || '操作失败');
+        // Login or register flow
+        const endpoint = mode === 'login' ? '/api/user/login' : '/api/user/register';
+        const body = mode === 'login'
+          ? { email: form.email, password: form.password }
+          : { username: form.username, email: form.email, password: form.password, code: form.code };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          if (mode === 'login') {
+            setUser({
+              username: data.user.username,
+              email: data.user.email,
+              avatar: data.user.avatar || '',
+            });
+            router.push('/');
+          } else {
+            setSuccess('注册成功，请登录');
+            setTimeout(() => setMode('login'), 1500);
+          }
+        } else {
+          setError(typeof data.error === 'object' ? data.error?.message || '操作失败' : data.error || '操作失败');
+        }
       }
     } catch {
       setError('网络错误');
@@ -89,8 +151,12 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-1">👤 {mode === 'login' ? '用户登录' : '用户注册'}</h1>
-          <p className="text-gray-400 text-sm mb-6">{mode === 'login' ? '登录后可评论、互动等' : '注册一个账号开始使用'}</p>
+          <h1 className="text-2xl font-bold text-white mb-1">
+            👤 {mode === 'login' ? '用户登录' : mode === 'register' ? '用户注册' : '重置密码'}
+          </h1>
+          <p className="text-gray-400 text-sm mb-6">
+            {mode === 'login' ? '登录后可评论、互动等' : mode === 'register' ? '注册一个账号开始使用' : '通过邮箱验证码重置密码'}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
@@ -119,19 +185,45 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* 验证码 - 注册和重置密码时显示 */}
+            {(mode === 'register' || mode === 'reset') && (
+              <div>
+                <label className="block text-gray-300 text-sm mb-1.5">验证码</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={form.code}
+                    onChange={e => setForm({ ...form, code: e.target.value })}
+                    className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    placeholder="请输入6位验证码"
+                    maxLength={6}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={sendCode}
+                    disabled={codeSending || codeCountdown > 0}
+                    className="px-4 py-2.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg text-sm hover:bg-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {codeSending ? '发送中...' : codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-gray-300 text-sm mb-1.5">密码</label>
+              <label className="block text-gray-300 text-sm mb-1.5">{mode === 'reset' ? '新密码' : '密码'}</label>
               <input
                 type="password"
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                placeholder="请输入密码"
+                placeholder={mode === 'reset' ? '请输入新密码' : '请输入密码'}
                 required
               />
             </div>
 
-            {mode === 'register' && (
+            {(mode === 'register' || mode === 'reset') && mode === 'register' && (
               <div>
                 <label className="block text-gray-300 text-sm mb-1.5">确认密码</label>
                 <input
@@ -162,9 +254,33 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-medium hover:from-indigo-600 hover:to-blue-600 transition-all disabled:opacity-50"
             >
-              {loading ? '请稍候...' : mode === 'login' ? '登录' : '注册'}
+              {loading ? '请稍候...' : mode === 'login' ? '登录' : mode === 'register' ? '注册' : '重置密码'}
             </button>
           </form>
+
+          {/* 忘记密码链接 - 仅登录模式显示 */}
+          {mode === 'login' && (
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => { setMode('reset'); setError(''); setSuccess(''); }}
+                className="text-indigo-400 hover:text-indigo-300 text-sm"
+              >
+                忘记密码？
+              </button>
+            </div>
+          )}
+
+          {/* 返回登录 - 重置密码模式显示 */}
+          {mode === 'reset' && (
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                className="text-indigo-400 hover:text-indigo-300 text-sm"
+              >
+                ← 返回登录
+              </button>
+            </div>
+          )}
 
           {/* 分隔线 */}
           <div className="flex items-center gap-3 my-6">

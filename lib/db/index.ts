@@ -39,7 +39,7 @@ function initTables(db: Database.Database) {
       cover_image TEXT DEFAULT '',
       category TEXT DEFAULT '',
       tags TEXT DEFAULT '[]',
-      status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'published')),
+      status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'hidden', 'deleted')),
       view_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -130,6 +130,28 @@ function initTables(db: Database.Database) {
 
   // ---- 并发控制：version 字段 ----
   // 为 blogs, site_config, music, media_files 添加 version 列（如果不存在）
+
+  // ---- 新表：用户 ----
+  db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    nickname TEXT DEFAULT '',
+    avatar TEXT DEFAULT '',
+    bio TEXT DEFAULT '',
+    signature TEXT DEFAULT '',
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ban_reason TEXT DEFAULT '',
+    admin_remark TEXT DEFAULT '',
+    ai_daily_limit INTEGER DEFAULT 10,
+    must_change_password INTEGER DEFAULT 0,
+    last_login_at DATETIME,
+    role TEXT DEFAULT 'user'
+  )`);
+
   try { db.exec('ALTER TABLE blogs ADD COLUMN version INTEGER DEFAULT 1'); } catch (e) { /* column exists */ }
   try { db.exec('ALTER TABLE site_config ADD COLUMN version INTEGER DEFAULT 1'); } catch (e) { /* column exists */ }
   try { db.exec('ALTER TABLE music ADD COLUMN version INTEGER DEFAULT 1'); } catch (e) { /* column exists */ }

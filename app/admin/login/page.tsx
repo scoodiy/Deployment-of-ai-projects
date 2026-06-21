@@ -29,7 +29,7 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem('admin_token', data.token);
+      // Token is set via HttpOnly cookie by the API, no need for localStorage
       router.push('/admin/dashboard');
     } catch {
       setError('网络错误');

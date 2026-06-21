@@ -14,10 +14,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { username, email, password } = body;
+    const { username, email, password, code } = body;
 
     // 只提取需要的字段，忽略其他所有字段（如 role、status 等）
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !code) {
       return NextResponse.json({ error: '请填写所有字段' }, { status: 400 });
     }
 
@@ -37,6 +37,18 @@ export async function POST(request: Request) {
     if (existing) {
       return NextResponse.json({ error: '用户名或邮箱已存在' }, { status: 400 });
     }
+
+    // Verify email code
+    const validCode = db.prepare(
+      "SELECT id FROM verification_codes WHERE email = ? AND code = ? AND type = ? AND used = 0 AND expires_at > datetime('now')"
+    ).get(email, code, 'register');
+
+    if (!validCode) {
+      return NextResponse.json({ error: '验证码无效或已过期' }, { status: 400 });
+    }
+
+    // Mark code as used
+    db.prepare('UPDATE verification_codes SET used = 1 WHERE id = ?').run(validCode.id);
 
     const passwordHash = await hashPassword(password);
     // 只插入必要字段，role/status 使用默认值
