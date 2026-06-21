@@ -43,3 +43,4 @@ docker-compose.override.yml
 OPTIMIZATION-PLAN.md
 TASK-PROMPT.md
 
+ops/backups/
