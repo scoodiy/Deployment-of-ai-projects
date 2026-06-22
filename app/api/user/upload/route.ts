@@ -6,6 +6,7 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import Busboy from 'busboy';
 import { Readable } from 'stream';
+import { hasValidFileSignature } from '@/lib/uploads/file-validation';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -22,7 +23,6 @@ function parseMultipart(request: Request): Promise<{ file: Buffer; filename: str
 
       const headers: Record<string, string> = {};
       request.headers.forEach((value, key) => { headers[key.toLowerCase()] = value; });
-      (readable as any).headers = headers;
 
       const bb = Busboy({ headers, limits: { fileSize: MAX_SIZE } });
       let fileBuffer: Buffer | null = null;
@@ -77,6 +77,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '只允许 jpg、png、webp、gif 格式' }, { status: 400 });
     }
 
+    if (!hasValidFileSignature(file, mimeType)) {
+      return NextResponse.json({ error: '文件内容与声明的图片格式不匹配' }, { status: 400 });
+    }
+
     if (file.length > MAX_SIZE) {
       return NextResponse.json({ error: '文件大小不能超过 5MB' }, { status: 400 });
     }
@@ -102,9 +106,9 @@ export async function POST(request: Request) {
       url: fileUrl,
       filename,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('User upload error:', error);
-    return NextResponse.json({ error: error.message || '上传失败' }, { status: 500 });
+    return NextResponse.json({ error: '上传失败' }, { status: 500 });
   }
 }
 

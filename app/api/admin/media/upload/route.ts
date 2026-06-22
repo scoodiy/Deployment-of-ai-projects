@@ -7,9 +7,10 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import Busboy from 'busboy';
 import { Readable } from 'stream';
+import { hasValidFileSignature } from '@/lib/uploads/file-validation';
 
 const ALLOWED_TYPES: Record<string, string[]> = {
-  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
+  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   audio: ['audio/mpeg', 'audio/wav', 'audio/mp3', 'audio/ogg', 'audio/flac'],
   video: ['video/mp4', 'video/webm'],
   document: ['application/pdf'],
@@ -33,7 +34,6 @@ function getFileCategory(mimeType: string): string {
 function parseMultipart(request: Request): Promise<{ file: Buffer; filename: string; mimeType: string; usageType: string }> {
   return new Promise(async (resolve, reject) => {
     try {
-      const contentType = request.headers.get('content-type') || '';
       const arrayBuffer = await request.arrayBuffer();
       const bodyBuffer = Buffer.from(arrayBuffer);
 
@@ -45,13 +45,12 @@ function parseMultipart(request: Request): Promise<{ file: Buffer; filename: str
         },
       });
 
-      // 模拟 Node IncomingMessage headers
-      (readable as any).headers = {};
+      const headers: Record<string, string> = {};
       request.headers.forEach((value, key) => {
-        (readable as any).headers[key.toLowerCase()] = value;
+        headers[key.toLowerCase()] = value;
       });
 
-      const bb = Busboy({ headers: (readable as any).headers, limits: { fileSize: 50 * 1024 * 1024 } });
+      const bb = Busboy({ headers, limits: { fileSize: 50 * 1024 * 1024 } });
       let fileBuffer: Buffer | null = null;
       let filename = '';
       let mimeType = '';
@@ -112,6 +111,10 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    if ((category === 'image' || category === 'document') && !hasValidFileSignature(file, mimeType)) {
+      return NextResponse.json({ error: '文件内容与声明的格式不匹配' }, { status: 400 });
+    }
+
     // 文件大小验证
     const maxSize = MAX_SIZE[category] || 10 * 1024 * 1024;
     if (file.length > maxSize) {
@@ -161,8 +164,8 @@ export async function POST(request: Request) {
       }
       throw dbError;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: error.message || '上传失败' }, { status: 500 });
+    return NextResponse.json({ error: '上传失败' }, { status: 500 });
   }
 }
