@@ -113,7 +113,7 @@ export default function CyberCat() {
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.1}
       whileDrag={{ scale: 1.1, cursor: "grabbing" }}
-      className="fixed bottom-4 right-3 z-[9999] flex flex-col items-center group cursor-grab active:cursor-grabbing md:bottom-20 md:right-20"
+      className="fixed bottom-4 right-3 z-[9999] hidden flex-col items-center group cursor-grab active:cursor-grabbing md:bottom-20 md:right-20 md:flex"
     >
       {/* 💬 聊天气泡 */}
       <div className="relative w-full flex justify-center mb-6">
