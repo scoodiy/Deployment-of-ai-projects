@@ -4,14 +4,34 @@ import { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
-import {Beaker, Rocket, Trees, Wrench} from 'lucide-react'; // 🌟 暂时移除了 Sofa 图标
+import { Beaker, Rocket, Trees } from 'lucide-react'; // 🌟 暂时移除了 Sofa 图标
 import { siteConfig } from '../../siteConfig'; // 🌟 引入站点配置
 
 import AlchemyLab from './AlchemyLab';
 import DijiangModel from './DijiangModel';
 // import OperatorRecreation from './OperatorRecreation'; // 🌟 先注释掉，以后需要随时可以加回来
 
-export default function CreativeWorkshopClient({ posts = [], chatters = [], moments = [] }: any) {
+type ContentItem = {
+  id?: string | number;
+  slug?: string;
+  title?: string;
+  type?: string;
+  date?: string | Date;
+  cover?: string | null;
+  content?: string;
+};
+
+type CreativeWorkshopClientProps = {
+  posts?: ContentItem[];
+  chatters?: ContentItem[];
+  moments?: ContentItem[];
+};
+
+export default function CreativeWorkshopClient({
+  posts = [],
+  chatters = [],
+  moments = [],
+}: CreativeWorkshopClientProps) {
   const [currentMode, setCurrentMode] = useState<'alchemy' | 'model'>('alchemy'); // 🌟 暂时只保留两个状态
 
   // =========================================================

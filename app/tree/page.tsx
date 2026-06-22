@@ -5,9 +5,29 @@ import matter from 'gray-matter';
 // 引入前台客户端组件
 import CreativeWorkshopClient from './CreativeWorkshopClient';
 
-function getLocalItems(directoryName: string, typeName: string) {
+type TreeContentType = 'post' | 'chatter' | 'moment';
+
+type TreeContentItem = {
+  id: string | number;
+  slug: string;
+  title: string;
+  type: TreeContentType;
+  date: string;
+  cover: string | null;
+  content: string;
+};
+
+type TreeContentMetadata = {
+  id?: string | number;
+  title?: string;
+  date?: string | Date;
+  cover?: string;
+  image?: string;
+};
+
+function getLocalItems(directoryName: string, typeName: TreeContentType): TreeContentItem[] {
   const dirPath = path.join(process.cwd(), directoryName);
-  let items: any[] = [];
+  let items: TreeContentItem[] = [];
   try {
     if (fs.existsSync(dirPath)) {
       const fileNames = fs.readdirSync(dirPath).filter(f => f.endsWith('.md'));
@@ -15,18 +35,29 @@ function getLocalItems(directoryName: string, typeName: string) {
         const fullPath = path.join(dirPath, fileName);
         // 🌟 核心：把 content（正文内容）和 data（头部参数）解构出来！
         const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
+        const metadata = data as TreeContentMetadata;
 
         // 提取真正的文件名作为路由 slug
         const realSlug = fileName.replace(/\.md$/, '');
+        const date = metadata.date instanceof Date
+          ? metadata.date.toISOString().split('T')[0]
+          : typeof metadata.date === 'string'
+            ? metadata.date
+            : '2026-05-01';
+        const cover = typeof metadata.cover === 'string'
+          ? metadata.cover
+          : typeof metadata.image === 'string'
+            ? metadata.image
+            : null;
 
         return {
-          id: data.id || realSlug,
+          id: metadata.id ?? realSlug,
           slug: realSlug, // 🌟 强制保留真实的 slug 供路由跳转使用
-          title: data.title || '',
+          title: typeof metadata.title === 'string' ? metadata.title : '',
           type: typeName,
-          date: data.date instanceof Date ? data.date.toISOString().split('T')[0] : (data.date || '2026-05-01'),
+          date,
           // 🌟 核心修复：把 cover（封面图）提取出来传给前台！如果写的是 image 也兼容
-          cover: data.cover || data.image || null,
+          cover,
           // 把正文传给前台，去掉可能存在的换行符，限制长度防止卡片撑爆
           content: content.trim()
         };
