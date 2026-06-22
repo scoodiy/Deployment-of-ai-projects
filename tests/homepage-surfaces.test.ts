@@ -16,6 +16,8 @@ test('homepage modules share the restrained life-journal surface system', async 
   assert.match(styles, /--home-accent:\s*#64795a/);
   assert.match(styles, /\.home-surface\s*\{/);
   assert.match(profile, /home-surface/);
+  assert.match(profile, /GitBranch/);
+  assert.doesNotMatch(profile, /Github/);
   assert.match(diary, /home-surface/);
   assert.match(player, /home-surface/);
   assert.match(theme, /home-surface/);

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { ExternalLink, Github, Leaf, Mail, MessageCircle } from 'lucide-react';
+import { ExternalLink, GitBranch, Leaf, Mail, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useSiteConfig } from './SiteConfigProvider';
@@ -54,7 +54,7 @@ export default function ProfileCard({ postCount, chatterCount, photoCount }: Pro
           <span>记录正在发生的生活</span>
         </div>
         <div className="flex shrink-0 gap-1" onClick={(event) => event.stopPropagation()}>
-          <SocialButton label="GitHub" href={siteConfig.github_url} icon={<Github className="h-4 w-4" />} />
+          <SocialButton label="GitHub" href={siteConfig.github_url} icon={<GitBranch className="h-4 w-4" />} />
           <SocialButton label="站外主页" href={siteConfig.bilibili_url} icon={<ExternalLink className="h-4 w-4" />} />
           <SocialButton label="复制邮箱" onClick={() => copyToClipboard(siteConfig.email || '', '邮箱')} icon={<Mail className="h-4 w-4" />} />
           <SocialButton label="复制 QQ" onClick={() => copyToClipboard(siteConfig.qq || '', 'QQ 号')} icon={<MessageCircle className="h-4 w-4" />} />
