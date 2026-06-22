@@ -9,4 +9,5 @@ test('homepage articles render a stable four-entry collection instead of an auto
 
   assert.match(source, /posts\.slice\(0,\s*4\)/);
   assert.doesNotMatch(source, /setInterval\(/);
+  assert.match(source, /post\.slug !== 'none' && post\.cover/);
 });

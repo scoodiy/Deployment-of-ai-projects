@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { FileText } from 'lucide-react';
 
 type Post = {
   slug: string;
@@ -39,11 +40,17 @@ export default function LatestPostsCarousel({ posts }: { posts: Post[] }) {
             href={getPostHref(post.slug)}
             className="group overflow-hidden border border-[var(--home-border)] bg-white/70 transition-colors hover:border-[var(--home-accent)] dark:bg-slate-900/40"
           >
-            <img
-              src={post.cover}
-              alt={post.title}
-              className="aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            />
+            {post.slug !== 'none' && post.cover ? (
+              <img
+                src={post.cover}
+                alt={post.title}
+                className="aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            ) : (
+              <div className="flex aspect-[16/9] items-center justify-center border-b border-[var(--home-border)] bg-[var(--home-bg)] text-[var(--home-accent)]">
+                <FileText className="h-8 w-8" aria-hidden="true" />
+              </div>
+            )}
             <div className="p-4">
               <div className="mb-2 flex items-center justify-between gap-3 text-xs text-[var(--home-muted)] dark:text-slate-400">
                 <span>{post.formattedDate || '刚刚更新'}</span>
