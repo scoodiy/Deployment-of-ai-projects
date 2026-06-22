@@ -36,5 +36,7 @@ test('dijiang point phases stay deterministic across renders', async () => {
   const source = await readFile(dijiangUrl, 'utf8');
 
   assert.match(source, /phases\[i\] = seededRandom\(i\) \* Math\.PI \* 2/);
+  assert.ok(source.includes('type TacticalRecord = {'));
   assert.doesNotMatch(source, /Math\.random\(\)/);
+  assert.doesNotMatch(source, /\bany\b/);
 });

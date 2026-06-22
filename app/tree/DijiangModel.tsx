@@ -2,7 +2,8 @@
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Rocket, Loader2, FileText, MessageCircle, Lightbulb, ChevronLeft, ChevronRight, Layers, ChevronDown, ShieldAlert, AlertTriangle, Crosshair, Activity, Cpu, Camera, Users, Grid, X, LockKeyhole, Shield } from 'lucide-react';
+import { Loader2, FileText, MessageCircle, Lightbulb, ChevronLeft, ChevronRight, Layers, ChevronDown, ShieldAlert, AlertTriangle, Crosshair, Activity, Cpu, Camera, Users, Grid, X, LockKeyhole, Shield } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 
@@ -15,6 +16,109 @@ import { siteConfig } from '../../siteConfig';
 import { albums } from '../../data/albums';
 import { friendsData } from '../../data/friends';
 
+type ContentType = 'post' | 'chatter' | 'moment';
+type RecordType = ContentType | 'message';
+type ExperienceCategory = 'p' | 'c' | 'm';
+
+type ContentItem = {
+  id?: string | number;
+  slug?: string;
+  type?: ContentType;
+  title?: string;
+  date?: string;
+  cover?: string;
+  image?: string;
+  content?: string;
+};
+
+type TacticalRecord = {
+  id: string | number;
+  slug?: string;
+  type: RecordType;
+  title: string;
+  date: string;
+  image: string;
+  content?: string;
+  author?: string;
+};
+
+type BadgeGroup = 'level' | 'post' | 'chatter' | 'moment' | 'photo' | 'friend';
+
+type Badge = {
+  id: string;
+  title: string;
+  typeLabel: string;
+  condition: string;
+  icon: LucideIcon;
+  colorTier: number;
+  group: BadgeGroup;
+};
+
+type GitHubIssue = {
+  comments_url: string;
+};
+
+type GitHubComment = {
+  id: string | number;
+  body: string;
+  created_at: string;
+  user: { login: string };
+};
+
+type OperatorTokenProps = {
+  badge: Badge;
+  locked?: boolean;
+};
+
+type BlinkingPointsProps = {
+  geometry: THREE.BufferGeometry;
+  color: THREE.ColorRepresentation;
+  size: number;
+  opacity: number;
+};
+
+type StackedTacticalHUDProps = {
+  records: TacticalRecord[];
+  color: string;
+  categoryName: string;
+  isImageStyle: boolean;
+  router: ReturnType<typeof useRouter>;
+};
+
+type TacticalPointProps = StackedTacticalHUDProps & {
+  position: [number, number, number];
+  isActive: boolean;
+};
+
+type HologramShipProps = {
+  activeCategory: RecordType | null;
+  currentRecords: TacticalRecord[];
+  router: ReturnType<typeof useRouter>;
+};
+
+type DijiangModelProps = {
+  posts?: ContentItem[];
+  chatters?: ContentItem[];
+  moments?: ContentItem[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isGitHubIssue(value: unknown): value is GitHubIssue {
+  return isRecord(value) && typeof value.comments_url === 'string';
+}
+
+function isGitHubComment(value: unknown): value is GitHubComment {
+  return isRecord(value)
+    && (typeof value.id === 'string' || typeof value.id === 'number')
+    && typeof value.body === 'string'
+    && typeof value.created_at === 'string'
+    && isRecord(value.user)
+    && typeof value.user.login === 'string';
+}
+
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
@@ -23,7 +127,7 @@ function seededRandom(seed: number) {
 // ==========================================
 // 🌟 0. 终末地/罗德岛 干员信物徽章组件 (OperatorToken)
 // ==========================================
-const OperatorToken = ({ badge, locked = false }: any) => {
+const OperatorToken = ({ badge, locked = false }: OperatorTokenProps) => {
   const tierStyles: Record<number, string> = {
     1: 'bg-[#f4f4f5] border-[#a1a1aa] text-[#52525b] shadow-[0_0_8px_#f4f4f544]',
     2: 'bg-[#dcfce7] border-[#4ade80] text-[#166534] shadow-[0_0_10px_#4ade8066]',
@@ -73,8 +177,8 @@ const formatDisplayDate = (dateStr: string) => {
 // ==========================================
 // 🌟 2. 特效组件
 // ==========================================
-const BlinkingPoints = ({ geometry, color, size, opacity }: any) => {
-  const materialRef = useRef<any>();
+const BlinkingPoints = ({ geometry, color, size, opacity }: BlinkingPointsProps) => {
+  const materialRef = useRef<THREE.PointsMaterial | null>(null);
   useMemo(() => {
     if (!geometry.hasAttribute('aPhase')) {
       const count = geometry.attributes.position.count;
@@ -111,16 +215,16 @@ const BlinkingPoints = ({ geometry, color, size, opacity }: any) => {
 // ==========================================
 // 🌟 3. 统一向左弹出的层叠数据卡片
 // ==========================================
-const StackedTacticalHUD = ({ records, color, categoryName, isImageStyle, router }: any) => {
+const StackedTacticalHUD = ({ records, color, categoryName, isImageStyle, router }: StackedTacticalHUDProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const stackRotations = useMemo(() => [-6, 4, -2], []);
 
   if (!records || records.length === 0) return null;
 
-  const handleItemClick = (r: any) => {
-    if (r.type === 'post') router.push(`/posts/${r.slug || r.id}`);
-    else if (r.type === 'chatter') router.push(`/chatter/${r.slug || r.id}`);
-    else if (r.type === 'moment') router.push(`/moments`);
+  const handleItemClick = (record: TacticalRecord) => {
+    if (record.type === 'post') router.push(`/posts/${record.slug || record.id}`);
+    else if (record.type === 'chatter') router.push(`/chatter/${record.slug || record.id}`);
+    else if (record.type === 'moment') router.push(`/moments`);
   };
 
   return (
@@ -143,7 +247,7 @@ const StackedTacticalHUD = ({ records, color, categoryName, isImageStyle, router
         <div className="relative px-3 pb-3 mt-2">
           {isExpanded ? (
             <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-1 ${isImageStyle ? 'max-h-[480px]' : 'max-h-[350px]'}`}>
-              {records.map((r: any) => (
+              {records.map((r) => (
                 isImageStyle ? (
                   <div key={r.id} onClick={() => handleItemClick(r)} className="relative w-full aspect-video shrink-0 overflow-hidden shadow-md group cursor-pointer border border-[#333] bg-[#222] rounded-xl">
                     <img src={r.image} alt={r.title} className="absolute inset-0 w-full h-full object-cover blur-[2px] group-hover:blur-0 transition-all duration-500 scale-110 opacity-70 group-hover:opacity-100" />
@@ -169,7 +273,7 @@ const StackedTacticalHUD = ({ records, color, categoryName, isImageStyle, router
             </motion.div>
           ) : (
             <div className={`relative mt-2 ${isImageStyle ? 'h-[190px]' : 'h-32'}`}>
-              {records.slice(0, 3).map((r: any, i: number) => (
+              {records.slice(0, 3).map((r, i) => (
                 <motion.div
                   key={r.id}
                   className={`absolute inset-x-0 shadow-xl cursor-pointer bg-[#222] border-l-2 overflow-hidden rounded-xl ${isImageStyle ? 'aspect-video border-y border-r border-[#333]' : 'p-4 flex flex-col h-24 border-y border-r border-[#333]'}`}
@@ -210,7 +314,7 @@ const StackedTacticalHUD = ({ records, color, categoryName, isImageStyle, router
 // ==========================================
 // 🌟 4. 巨型雷达荧光信标
 // ==========================================
-const TacticalPoint = ({ position, color, isActive, records, categoryName, isImageStyle, router }: any) => {
+const TacticalPoint = ({ position, color, isActive, records, categoryName, isImageStyle, router }: TacticalPointProps) => {
   return (
     <group position={position}>
       <Html center zIndexRange={isActive ? [9999, 9000] : [100, 0]}>
@@ -296,7 +400,7 @@ const DijiangParticleModel = () => {
   );
 };
 
-const HologramShip = ({ activeCategory, currentRecords, router }: any) => {
+const HologramShip = ({ activeCategory, currentRecords, router }: HologramShipProps) => {
   return (
     <Float speed={2} rotationIntensity={0.05} floatIntensity={0.5}>
       {/* 👇 调整这里的 scale 和 position 来控制整体大小和位置 👇 */}
@@ -308,13 +412,13 @@ const HologramShip = ({ activeCategory, currentRecords, router }: any) => {
           <DijiangParticleModel />
 
           <TacticalPoint position={[-1.0, -0.5, 1.5]} color="#0ea5e9" categoryName="PRTS_DB"
-                         isActive={activeCategory === 'post'} records={currentRecords.filter((r:any) => r.type === 'post')} isImageStyle={true} router={router} />
+                         isActive={activeCategory === 'post'} records={currentRecords.filter((record) => record.type === 'post')} isImageStyle={true} router={router} />
           <TacticalPoint position={[-1.5, -2, 1.5]} color="#eab308" categoryName="LOGS"
-                         isActive={activeCategory === 'chatter'} records={currentRecords.filter((r:any) => r.type === 'chatter')} isImageStyle={true} router={router} />
+                         isActive={activeCategory === 'chatter'} records={currentRecords.filter((record) => record.type === 'chatter')} isImageStyle={true} router={router} />
           <TacticalPoint position={[-2.3, 0, 1.5]} color="#10b981" categoryName="BEACON"
-                         isActive={activeCategory === 'moment'} records={currentRecords.filter((r:any) => r.type === 'moment')} isImageStyle={false} router={router} />
+                         isActive={activeCategory === 'moment'} records={currentRecords.filter((record) => record.type === 'moment')} isImageStyle={false} router={router} />
           <TacticalPoint position={[-2.3, -0.5, 1.5]} color="#f1f5f9" categoryName="RECEPTION"
-                         isActive={activeCategory === 'message'} records={currentRecords.filter((r:any) => r.type === 'message')} isImageStyle={false} router={router} />
+                         isActive={activeCategory === 'message'} records={currentRecords.filter((record) => record.type === 'message')} isImageStyle={false} router={router} />
         </group>
       </group>
     </Float>
@@ -324,7 +428,7 @@ const HologramShip = ({ activeCategory, currentRecords, router }: any) => {
 // ==========================================
 // 🌟 6. 核心页面渲染
 // ==========================================
-export default function DijiangModel({ posts = [], chatters = [], moments = [] }: any) {
+export default function DijiangModel({ posts = [], chatters = [], moments = [] }: DijiangModelProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [sysTip, setSysTip] = useState<string | null>(null);
@@ -332,28 +436,33 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
 
   useEffect(() => { setMounted(true); }, []);
 
-  const [realWishes, setRealWishes] = useState<any[]>([]);
+  const [realWishes, setRealWishes] = useState<TacticalRecord[]>([]);
 
   // RPG 数据结算
   const rpgStats = useMemo(() => {
     if (siteConfig?.enableLevelSystem !== true) return null;
 
-    const totalPhotos = (albums || []).reduce((acc: number, curr: any) => acc + (curr.photos?.length || 0), 0);
+    const totalPhotos = (albums || []).reduce((acc: number, curr) => acc + (curr.photos?.length || 0), 0);
     const totalFriends = (friendsData || []).length;
 
-    const parseDateStr = (dateVal: any) => {
+    const parseDateStr = (dateVal: unknown) => {
       try {
-        const d = new Date(dateVal);
+        const d = dateVal instanceof Date
+          ? dateVal
+          : typeof dateVal === 'string' || typeof dateVal === 'number'
+            ? new Date(dateVal)
+            : null;
+        if (!d) return null;
         if (isNaN(d.getTime())) return null;
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      } catch (e) { return null; }
+      } catch { return null; }
     };
 
     const todayString = parseDateStr(new Date());
     let tp = 0, tc = 0, tm = 0;
     const uniqueDays = new Set();
 
-    const processItem = (item: any, type: string) => {
+    const processItem = (item: ContentItem, type: ExperienceCategory) => {
       if (item.date) {
         const ds = parseDateStr(item.date);
         if (ds) {
@@ -367,9 +476,9 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
       }
     };
 
-    posts.forEach((i: any) => processItem(i, 'p'));
-    chatters.forEach((i: any) => processItem(i, 'c'));
-    moments.forEach((i: any) => processItem(i, 'm'));
+    posts.forEach((item) => processItem(item, 'p'));
+    chatters.forEach((item) => processItem(item, 'c'));
+    moments.forEach((item) => processItem(item, 'm'));
 
     const postsExp = posts.length * 50;
     const chattersExp = chatters.length * 20;
@@ -398,7 +507,7 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
     }
     const progressPercent = ((remainingExp / expNeededForNextLevel) * 100).toFixed(1);
 
-    const allCatalogBadges: any[] = [];
+    const allCatalogBadges: Badge[] = [];
     const ownedIds = new Set();
 
     const levelConfig = [
@@ -499,21 +608,28 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
         const { owner, repo } = siteConfig.gitalkConfig;
         const targetLabel = `workshop-${currentMonthStr}`;
         const issueRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues?labels=${targetLabel}`);
-        const issues = await issueRes.json();
+        const issues: unknown = await issueRes.json();
+        const issue = Array.isArray(issues) ? issues.find(isGitHubIssue) : undefined;
 
-        if (issues && issues.length > 0) {
-          const commentsRes = await fetch(issues[0].comments_url);
-          const comments = await commentsRes.json();
+        if (issue) {
+          const commentsRes = await fetch(issue.comments_url);
+          const comments: unknown = await commentsRes.json();
           if (isMounted && Array.isArray(comments)) {
-            const fetchedWishes = comments.map((c: any) => ({
-              id: c.id.toString(), content: c.body, title: c.body, author: c.user.login, type: 'message', date: c.created_at,
+            const fetchedWishes = comments.filter(isGitHubComment).map((comment) => ({
+              id: comment.id.toString(),
+              content: comment.body,
+              title: comment.body,
+              author: comment.user.login,
+              type: 'message' as const,
+              date: comment.created_at,
+              image: '',
             }));
             setRealWishes(fetchedWishes);
             return;
           }
         }
         if (isMounted) setRealWishes([]);
-      } catch (err) {
+      } catch {
         if (isMounted) setRealWishes([]);
       }
     };
@@ -522,11 +638,21 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
   }, [currentMonthStr, mounted]);
 
   const currentMonthRecords = useMemo(() => {
-    const formatted = [...posts, ...chatters, ...moments].map(r => ({
-      id: r.id || r.slug, slug: r.slug, type: r.type, title: r.title, date: r.date,
-      image: r.cover || r.image || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop',
-      content: r.content
-    })).filter(r => r.date.startsWith(currentMonthStr));
+    const fallbackImage = 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop';
+    const toTacticalRecord = (item: ContentItem, type: ContentType): TacticalRecord => ({
+      id: item.id ?? item.slug ?? item.title ?? `${type}-record`,
+      slug: item.slug,
+      type,
+      title: item.title ?? '',
+      date: item.date ?? '',
+      image: item.cover || item.image || fallbackImage,
+      content: item.content,
+    });
+    const formatted = [
+      ...posts.map((item) => toTacticalRecord(item, 'post')),
+      ...chatters.map((item) => toTacticalRecord(item, 'chatter')),
+      ...moments.map((item) => toTacticalRecord(item, 'moment')),
+    ].filter((record) => record.date.startsWith(currentMonthStr));
     return [...formatted, ...realWishes];
   }, [currentMonthStr, posts, chatters, moments, realWishes]);
 
@@ -605,7 +731,7 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
 
             <div className="flex items-center gap-6 z-20 md:border-l border-[#333] md:pl-6 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 mt-2 md:mt-0 relative group/tooltip cursor-crosshair">
               <div className="flex flex-col items-center flex-1 md:flex-none">
-                <span className="text-slate-400 text-[9px] font-bold tracking-[0.2em] mb-1">TODAY'S UPLINK</span>
+                <span className="text-slate-400 text-[9px] font-bold tracking-[0.2em] mb-1">TODAY&apos;S UPLINK</span>
                 <span className="text-[#eab308] font-mono text-sm font-black">+{rpgStats.todayExp} EXP</span>
               </div>
               <div className="flex flex-col items-center flex-1 md:flex-none">
