@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import Link from 'next/link';
+import matter from 'gray-matter';
 
 import Navbar from '../components/Navbar';
 import PageTransition from '../components/PageTransition';
@@ -20,6 +23,15 @@ import LatestChatterCarousel from '../components/LatestChatterCarousel';
 // 获取数据库配置
 const dbConfig = getSiteConfig();
 
+type Chatter = {
+  slug: string;
+  title: string;
+  description: string;
+  cover: string;
+  date: string;
+  formattedDate: string;
+};
+
 function formatUpdateTime(dateString: string) {
   if (!dateString || dateString === '1970-01-01') return '刚刚更新';
   try {
@@ -40,29 +52,31 @@ export default function Home() {
   const allPosts = getPublishedPosts();
   const top5Posts = allPosts.length > 0 ? allPosts.slice(0, 5) : [{ slug: 'none', title: '暂无文章', description: '快去写第一篇吧！', cover: siteConfig.defaultPostCover, date: '', formattedDate: '', category: '', tags: [], view_count: 0 }];
 
-  // 说说仍从本地文件读取（数据库暂无说说表）
-  const fs = require('fs');
-  const path = require('path');
-  const matter = require('gray-matter');
   const chattersDirectory = path.join(process.cwd(), 'chatters');
-  let allChatters: any[] = [];
+  let allChatters: Chatter[] = [];
   try {
     if (fs.existsSync(chattersDirectory)) {
       const chatterFiles = fs.readdirSync(chattersDirectory).filter((f: string) => f.endsWith('.md'));
       allChatters = chatterFiles.map((fileName: string) => {
         const fullPath = path.join(chattersDirectory, fileName);
         const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
-        const rawDate = data.date instanceof Date ? data.date.toISOString().split('T')[0] : (data.date || '1970-01-01');
-        const cover = data.cover || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop';
-        return { slug: fileName.replace(/\.md$/, ''), title: data.title || '碎片记录', description: data.description || content.substring(0, 60), cover: cover, date: rawDate, formattedDate: formatUpdateTime(rawDate) };
-      }).sort((a: any, b: any) => {
+        const rawDate = data.date instanceof Date
+          ? data.date.toISOString().split('T')[0]
+          : typeof data.date === 'string' ? data.date : '1970-01-01';
+        const title = typeof data.title === 'string' ? data.title : '碎片记录';
+        const description = typeof data.description === 'string' ? data.description : content.substring(0, 60);
+        const cover = typeof data.cover === 'string'
+          ? data.cover
+          : 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop';
+        return { slug: fileName.replace(/\.md$/, ''), title, description, cover, date: rawDate, formattedDate: formatUpdateTime(rawDate) };
+      }).sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
         if (dateB !== dateA) return dateB - dateA;
         return b.slug.localeCompare(a.slug);
       });
     }
-  } catch (e) {}
+  } catch {}
   const top5Chatters = allChatters.length > 0 ? allChatters.slice(0, 5) : [{ slug: 'none', title: '暂无记录', description: '记录一段思绪...', cover: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop', date: '', formattedDate: '' }];
 
   const publishedAlbums = albums.filter(a => !a.status || a.status === 'published');
@@ -72,63 +86,69 @@ export default function Home() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen relative pb-10">
+      <div className="min-h-screen pb-10">
         <Navbar />
         <PageTransition>
-          <div className="w-full max-w-6xl mx-auto mt-28 px-4 sm:px-10 relative z-10">
+          <div className="mx-auto mt-24 w-full max-w-6xl px-4 sm:px-8">
             <SearchBar posts={allPosts} />
 
-            <main className="flex flex-col gap-6 w-full">
-              {/* 公告栏 */}
+            <main className="flex w-full flex-col gap-5">
               {dbConfig.show_announcement && dbConfig.announcement && (
-                <div className="w-full px-5 py-3 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-300/30 dark:border-amber-500/20 backdrop-blur-md">
+                <div className="border border-amber-300/50 bg-amber-50/80 px-5 py-3 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                   <div className="flex items-center gap-2">
-                    <span className="text-amber-500 text-sm">📢</span>
-                    <p className="text-sm text-amber-800 dark:text-amber-200">{dbConfig.announcement}</p>
+                    <span className="text-sm text-amber-700 dark:text-amber-300">公告</span>
+                    <p className="text-sm">{dbConfig.announcement}</p>
                   </div>
                 </div>
               )}
 
-              {/* 第一行：个人信息 + 播放器 */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 w-full items-stretch">
-                <div className="md:col-span-7 flex">
-                    <ProfileCard postCount={allPosts.length} chatterCount={chatterCount} photoCount={realPhotoCount}/>
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                <div className="lg:col-span-4">
+                  <ProfileCard postCount={allPosts.length} chatterCount={chatterCount} photoCount={realPhotoCount} />
                 </div>
-
-                <div className="md:col-span-5 flex">
-                    <CloudPlayer/>
+                <div className="lg:col-span-4">
+                  <LatestChatterCarousel chatters={top5Chatters} />
                 </div>
-              </div>
+                <Link href="/photowall" className="home-surface group overflow-hidden lg:col-span-4">
+                  <img
+                    src={latestAlbum.cover}
+                    alt={latestAlbum.title}
+                    className="aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  />
+                  <div className="border-t border-[var(--home-border)] p-5">
+                    <p className="text-xs font-semibold text-[var(--home-accent)]">LATEST PHOTOS</p>
+                    <h2 className="mt-1 text-xl font-bold text-[var(--home-text)] dark:text-slate-100">{latestAlbum.title}</h2>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--home-muted)] dark:text-slate-400">{latestAlbum.description}</p>
+                  </div>
+                </Link>
+              </section>
 
-              {/* 歌词栏 */}
-              <div className="w-full mt-[-10px]"><LyricBar/></div>
-
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 w-full items-stretch">
-                <div className="md:col-span-4 h-full">
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                <div className="lg:col-span-8">
                   <LatestPostsCarousel posts={top5Posts} />
                 </div>
-                <div className="md:col-span-8 flex flex-col gap-6 h-full">
-                  <Link href="/photowall" className="flex-1 rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl overflow-hidden transition-all duration-700 hover:scale-[1.02] relative group min-h-[220px]">
-                    <img src={latestAlbum.cover} className="w-full h-full absolute inset-0 object-cover transition-transform duration-700 group-hover:scale-105 opacity-90"/>
-                    <div className="absolute inset-0 bg-black/20 dark:bg-black/50 group-hover:bg-transparent transition-colors duration-500"></div>
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <h3 className="text-3xl font-bold text-white mb-2 underline decoration-pink-400">{latestAlbum.title}</h3>
-                      <p className="text-white/90 text-lg line-clamp-1">{latestAlbum.description}</p>
-                    </div>
-                  </Link>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 min-h-[220px] items-stretch">
-                    <div className="md:col-span-8 h-full">
-                      <LatestChatterCarousel chatters={top5Chatters} />
-                    </div>
-                    <div className="md:col-span-4 h-full flex">
-                      <ThemeToggleBlock />
-                    </div>
-                  </div>
+                <div className="lg:col-span-4">
+                  <CloudPlayer />
                 </div>
-              </div>
+              </section>
 
-              {/* 底部数据面板 */}
-              <div className="w-full mt-2"><SiteDashboard/></div>
+              <div className="w-full"><LyricBar /></div>
+
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                <Link href="/photowall" className="home-surface flex min-h-[180px] flex-col justify-between p-6 transition-colors lg:col-span-8">
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--home-accent)]">PHOTO WALL</p>
+                    <h2 className="mt-2 text-2xl font-bold text-[var(--home-text)] dark:text-slate-100">用照片留住当下</h2>
+                    <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--home-muted)] dark:text-slate-400">从日常光影到远方风景，翻看 {realPhotoCount} 张已经收录的照片。</p>
+                  </div>
+                  <span className="mt-6 text-sm text-[var(--home-accent)]">进入照片墙</span>
+                </Link>
+                <div className="lg:col-span-4">
+                  <ThemeToggleBlock />
+                </div>
+              </section>
+
+              <div className="w-full"><SiteDashboard /></div>
             </main>
           </div>
         </PageTransition>
