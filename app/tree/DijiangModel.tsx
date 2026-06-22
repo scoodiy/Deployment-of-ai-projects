@@ -79,7 +79,7 @@ const BlinkingPoints = ({ geometry, color, size, opacity }: any) => {
     if (!geometry.hasAttribute('aPhase')) {
       const count = geometry.attributes.position.count;
       const phases = new Float32Array(count);
-      for(let i=0; i<count; i++) phases[i] = Math.random() * Math.PI * 2;
+      for(let i=0; i<count; i++) phases[i] = seededRandom(i) * Math.PI * 2;
       geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
     }
   }, [geometry]);

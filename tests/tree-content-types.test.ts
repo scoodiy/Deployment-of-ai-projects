@@ -5,6 +5,7 @@ import test from 'node:test';
 const workshopUrl = new URL('../app/tree/CreativeWorkshopClient.tsx', import.meta.url);
 const pageUrl = new URL('../app/tree/page.tsx', import.meta.url);
 const alchemyUrl = new URL('../app/tree/AlchemyLab.tsx', import.meta.url);
+const dijiangUrl = new URL('../app/tree/DijiangModel.tsx', import.meta.url);
 
 test('creative workshop accepts typed content collections', async () => {
   const source = await readFile(workshopUrl, 'utf8');
@@ -29,4 +30,11 @@ test('alchemy lab keeps its UI and API data boundaries typed', async () => {
   assert.match(source, /type Badge = \{/);
   assert.match(source, /type GitHubComment = \{/);
   assert.doesNotMatch(source, /\bany\b/);
+});
+
+test('dijiang point phases stay deterministic across renders', async () => {
+  const source = await readFile(dijiangUrl, 'utf8');
+
+  assert.match(source, /phases\[i\] = seededRandom\(i\) \* Math\.PI \* 2/);
+  assert.doesNotMatch(source, /Math\.random\(\)/);
 });
