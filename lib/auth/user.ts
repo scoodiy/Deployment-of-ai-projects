@@ -1,9 +1,22 @@
 import { SignJWT, jwtVerify } from 'jose';
 import bcryptjs from 'bcryptjs';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.USER_JWT_SECRET || 'ayuu-fun-user-secret-key-2026'
-);
+let userJwtSecret: Uint8Array | null = null;
+
+function getUserJwtSecret(): Uint8Array {
+  if (userJwtSecret) return userJwtSecret;
+
+  const secret = process.env.USER_JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: USER_JWT_SECRET environment variable is required in production');
+    }
+    userJwtSecret = new TextEncoder().encode('dev-user-secret-not-for-production');
+  } else {
+    userJwtSecret = new TextEncoder().encode(secret);
+  }
+  return userJwtSecret;
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, 10);
@@ -18,12 +31,12 @@ export async function createUserToken(payload: Record<string, unknown>): Promise
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
+    .sign(getUserJwtSecret());
 }
 
 export async function verifyUserToken(token: string): Promise<Record<string, unknown> | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getUserJwtSecret());
     return payload as Record<string, unknown>;
   } catch {
     return null;

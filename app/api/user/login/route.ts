@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { verifyPassword, createUserToken } from '@/lib/auth/user';
 
 import { rateLimitMiddleware, getClientIp } from '@/lib/rate-limit';
+import { setUserTokenCookie } from '@/lib/auth/user-cookie';
 
 export async function POST(request: Request) {
   // 限流检查
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       user: { id: user.id, username: user.username, email: user.email }
     });
 
-    response.headers.set('Set-Cookie', `user_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+    response.headers.set('Set-Cookie', setUserTokenCookie(token));
     return response;
   } catch (error) {
     console.error('Login error:', error);
