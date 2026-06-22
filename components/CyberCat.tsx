@@ -113,7 +113,7 @@ export default function CyberCat() {
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.1}
       whileDrag={{ scale: 1.1, cursor: "grabbing" }}
-      className="fixed bottom-20 right-20 z-[9999] flex flex-col items-center group cursor-grab active:cursor-grabbing"
+      className="fixed bottom-4 right-3 z-[9999] flex flex-col items-center group cursor-grab active:cursor-grabbing md:bottom-20 md:right-20"
     >
       {/* 💬 聊天气泡 */}
       <div className="relative w-full flex justify-center mb-6">
@@ -137,7 +137,7 @@ export default function CyberCat() {
       <div className="relative">
 
         {/* 🌟 核心修改区：去掉了 opacity-0 和 group-hover，让按钮常驻显示 */}
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-20">
+        <div className="absolute -left-10 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-1.5 md:-left-12 md:gap-2">
 
             {/* 💬 聊天按钮 */}
             <button
@@ -146,10 +146,10 @@ export default function CyberCat() {
                  setShowInput(!showInput);
               }}
               // 稍微加了一点半透明背景，让常驻按钮在深色背景下也好看
-              className="bg-white/90 dark:bg-slate-700/90 p-2.5 rounded-full shadow-md hover:scale-110 active:scale-95 transition-transform border border-gray-100 dark:border-slate-600 text-blue-500 hover:text-blue-600 flex items-center justify-center backdrop-blur-sm"
+              className="flex items-center justify-center rounded-full border border-gray-100 bg-white/90 p-2 text-blue-500 shadow-md transition-transform hover:scale-110 hover:text-blue-600 active:scale-95 dark:border-slate-600 dark:bg-slate-700/90 md:p-2.5"
               title="聊天"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 md:h-5 md:w-5">
                 <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 01-.814 1.686.75.75 0 00.44 1.223zM8.25 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM10.875 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zm4.875-1.125a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z" clipRule="evenodd" />
               </svg>
             </button>
@@ -158,16 +158,16 @@ export default function CyberCat() {
             <button
               onClick={handleFeed}
               disabled={isThinking}
-              className={`bg-white/90 dark:bg-slate-700/90 p-2.5 rounded-full shadow-md hover:scale-110 active:scale-95 transition-transform border border-gray-100 dark:border-slate-600 flex items-center justify-center backdrop-blur-sm ${isThinking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center rounded-full border border-gray-100 bg-white/90 p-2 shadow-md transition-transform hover:scale-110 active:scale-95 dark:border-slate-600 dark:bg-slate-700/90 md:p-2.5 ${isThinking ? 'cursor-not-allowed opacity-50' : ''}`}
               title="喂小鱼干"
             >
-              <span className="text-xl leading-none">🐟</span>
+              <span className="text-base leading-none md:text-xl">🐟</span>
             </button>
         </div>
 
         {/* 猫咪图片容器 */}
         <div
-          className="w-[120px] h-[120px] relative cursor-pointer"
+          className="relative w-16 h-16 cursor-pointer md:w-[120px] md:h-[120px]"
           onClick={handlePetCat}
         >
           <style>{`
@@ -213,7 +213,7 @@ export default function CyberCat() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.9 }}
             onSubmit={handleChatSubmit}
-            className="absolute -bottom-14 bg-white dark:bg-slate-800 p-1.5 rounded-full shadow-lg flex items-center border border-gray-200 dark:border-slate-700 w-56 z-20"
+            className="absolute bottom-full right-0 z-20 mb-2 flex w-56 items-center rounded-full border border-gray-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800 md:-bottom-14 md:mb-0"
           >
             <input
               type="text"
