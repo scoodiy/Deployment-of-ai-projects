@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Independent legacy application and one-off database repair script.
+    "frontend/**",
+    "fix-db.js",
   ]),
 ]);
 
