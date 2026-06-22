@@ -1,49 +1,51 @@
-#!/bin/bash
-# ayuu.fun 数据库备份脚本
-# 用法: ./ops/backup.sh [保留天数]
-# 定时: crontab -e → 0 3 * * * /opt/xhblogs/ops/backup.sh 7
+#!/usr/bin/env bash
+# ayuu.fun SQLite backup script
 
 set -euo pipefail
+umask 077
 
-# === 配置 ===
 PROJECT_DIR="/opt/xhblogs"
 DB_FILE="${PROJECT_DIR}/data/ayuu.db"
 BACKUP_DIR="${PROJECT_DIR}/ops/backups"
-KEEP_DAYS="${1:-7}"       # 默认保留7天
+KEEP_DAYS="${1:-7}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/ayuu_${TIMESTAMP}.db"
 
-# === 检查 ===
 if [ ! -f "$DB_FILE" ]; then
-    echo "❌ 数据库文件不存在: $DB_FILE"
-    exit 1
+  echo "Database file does not exist: $DB_FILE" >&2
+  exit 1
 fi
 
-# === 创建备份目录 ===
+if ! command -v sqlite3 >/dev/null 2>&1; then
+  echo "sqlite3 is required for a consistent online backup" >&2
+  exit 1
+fi
+
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
-# === 备份 (使用 sqlite3 .backup 确保一致性) ===
-if command -v sqlite3 &>/dev/null; then
-    sqlite3 "$DB_FILE" ".backup '${BACKUP_FILE}'"
-else
-    # 如果没有 sqlite3，直接复制 (服务运行时可能不一致)
-    cp "$DB_FILE" "$BACKUP_FILE"
+cleanup_failed_backup() {
+  rm -f "$BACKUP_FILE" "${BACKUP_FILE}.gz"
+}
+trap cleanup_failed_backup ERR
+
+sqlite3 -cmd '.timeout 5000' "$DB_FILE" ".backup '${BACKUP_FILE}'"
+
+if [ "$(sqlite3 "$BACKUP_FILE" 'PRAGMA integrity_check;')" != "ok" ]; then
+  echo "Backup integrity check failed" >&2
+  cleanup_failed_backup
+  exit 1
 fi
 
-# === 压缩 ===
-gzip "$BACKUP_FILE"
+gzip -9 "$BACKUP_FILE"
+trap - ERR
+
 COMPRESSED_FILE="${BACKUP_FILE}.gz"
 COMPRESSED_SIZE=$(du -h "$COMPRESSED_FILE" | cut -f1)
+echo "Backup complete: ${COMPRESSED_FILE} (${COMPRESSED_SIZE})"
 
-echo "✅ 备份完成: ${COMPRESSED_FILE} (${COMPRESSED_SIZE})"
+find "$BACKUP_DIR" -name 'ayuu_*.db.gz' -mtime +"${KEEP_DAYS}" -delete
 
-# === 清理旧备份 ===
-DELETED=$(find "$BACKUP_DIR" -name "ayuu_*.db.gz" -mtime +${KEEP_DAYS} -delete -print | wc -l)
-if [ "$DELETED" -gt 0 ]; then
-    echo "🗑️  已清理 ${DELETED} 个超过 ${KEEP_DAYS} 天的旧备份"
-fi
-
-# === 显示当前备份列表 ===
-BACKUP_COUNT=$(find "$BACKUP_DIR" -name "ayuu_*.db.gz" | wc -l)
+BACKUP_COUNT=$(find "$BACKUP_DIR" -name 'ayuu_*.db.gz' | wc -l)
 TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
-echo "📦 当前备份: ${BACKUP_COUNT} 个, 共 ${TOTAL_SIZE}"
+echo "Available backups: ${BACKUP_COUNT}, total ${TOTAL_SIZE}"
