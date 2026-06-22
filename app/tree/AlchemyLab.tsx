@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 // 🌟 引入了新的图标 Camera, Users, Sprout
-import { MessageCircleHeart, ChevronLeft, ChevronRight, BookOpen, ScrollText, Coffee, FileText, Sparkles, Award, Shield, X, Grid, LockKeyhole, Camera, Users, Sprout } from 'lucide-react';
+import { MessageCircleHeart, ChevronLeft, ChevronRight, BookOpen, ScrollText, Coffee, FileText, Sparkles, Award, Shield, X, Grid, LockKeyhole, Camera, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // 🌟 引入定制的无干扰留言板组件与站点配置
@@ -14,6 +15,105 @@ import { siteConfig } from '../../siteConfig';
 import { albums } from '../../data/albums';
 import { friendsData } from '../../data/friends';
 
+type ContentType = 'post' | 'chatter' | 'moment';
+type ExperienceCategory = 'p' | 'c' | 'm';
+
+type ContentItem = {
+  id?: string | number;
+  slug?: string;
+  title?: string;
+  type?: ContentType;
+  date?: string;
+  content?: string;
+  description?: string;
+};
+
+type FlaskItem = ContentItem & {
+  type: ContentType;
+  sortKey: number;
+  fillLevel: number;
+  marginLeft: number;
+  marginRight: number;
+};
+
+type Wish = {
+  id: string;
+  content: string;
+  author: string;
+  type: 'wish';
+  date: string;
+};
+
+type StickyNoteData = Wish & {
+  shelfIndex: number;
+  side: 'left' | 'right';
+  color: string;
+  rotation: number;
+  offsetY: number;
+  offsetOut: number;
+};
+
+type BadgeGroup = 'level' | 'post' | 'chatter' | 'moment' | 'photo' | 'friend';
+
+type Badge = {
+  id: string;
+  title: string;
+  typeLabel: string;
+  condition: string;
+  icon: LucideIcon;
+  colorTier: number;
+  group: BadgeGroup;
+};
+
+type GitHubIssue = {
+  comments_url: string;
+};
+
+type GitHubComment = {
+  id: string | number;
+  body: string;
+  user: {
+    login: string;
+  };
+};
+
+type HexBadgeProps = {
+  badge: Badge;
+  locked?: boolean;
+};
+
+type MagicTooltipProps = {
+  title?: string;
+  type: ContentType | 'wish';
+  content?: string;
+  author?: string;
+  color: string;
+};
+
+type AlchemyLabProps = {
+  posts?: ContentItem[];
+  chatters?: ContentItem[];
+  moments?: ContentItem[];
+};
+
+type AppRouter = ReturnType<typeof useRouter>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isGitHubIssue(value: unknown): value is GitHubIssue {
+  return isRecord(value) && typeof value.comments_url === 'string';
+}
+
+function isGitHubComment(value: unknown): value is GitHubComment {
+  return isRecord(value)
+    && (typeof value.id === 'string' || typeof value.id === 'number')
+    && typeof value.body === 'string'
+    && isRecord(value.user)
+    && typeof value.user.login === 'string';
+}
+
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
@@ -22,7 +122,7 @@ function seededRandom(seed: number) {
 // ==========================================
 // 🌟 0. 炼金六边形徽章组件 (HexBadge) 满血特效版
 // ==========================================
-const HexBadge = ({ badge, locked = false }: any) => {
+const HexBadge = ({ badge, locked = false }: HexBadgeProps) => {
   // 1~10阶 材质与动画特效
   const tierStyles: Record<number, string> = {
     1: 'from-[#5d4037] to-[#8d6e63] border-[#4e342e] text-[#d7ccc8] shadow-[0_0_8px_#5d403744]',
@@ -65,7 +165,7 @@ const HexBadge = ({ badge, locked = false }: any) => {
 // ==========================================
 // 🌟 1. 魔法信息卡片组件
 // ==========================================
-const MagicTooltip = ({ title, type, content, author, color }: any) => (
+const MagicTooltip = ({ title, type, content, author, color }: MagicTooltipProps) => (
   <motion.div
     initial={{ opacity: 0, y: -10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -5, scale: 0.9 }}
     className="absolute top-[120%] left-1/2 -translate-x-1/2 min-w-[200px] max-w-[280px] w-max z-[100] pointer-events-none"
@@ -104,9 +204,9 @@ const MagicTooltip = ({ title, type, content, author, color }: any) => (
 // ==========================================
 // 🌟 2. 交互式玻璃药水瓶
 // ==========================================
-const LiquidFlask = ({ item, router }: { item: any; router: any }) => {
+const LiquidFlask = ({ item, router }: { item: FlaskItem; router: AppRouter }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const colorMap: Record<string, string> = { post: '#3b82f6', chatter: '#f59e0b', moment: '#10b981' };
+  const colorMap: Record<ContentType, string> = { post: '#3b82f6', chatter: '#f59e0b', moment: '#10b981' };
   const color = colorMap[item.type] || '#fff';
   const fillHeight = item.fillLevel;
 
@@ -159,7 +259,7 @@ const LiquidFlask = ({ item, router }: { item: any; router: any }) => {
 // ==========================================
 // 🌟 3. 便利贴纸
 // ==========================================
-const StickyNote = ({ note }: { note: any }) => {
+const StickyNote = ({ note }: { note: StickyNoteData }) => {
   const [isHovered, setIsHovered] = useState(false);
   return (
     <motion.div
@@ -179,7 +279,7 @@ const StickyNote = ({ note }: { note: any }) => {
 // ==========================================
 // 🌟 4. 核心实验室组件 (完全体)
 // ==========================================
-export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: any) {
+export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: AlchemyLabProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mountTimeout, setMountTimeout] = useState(false);
@@ -188,7 +288,7 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     const t = setTimeout(() => { if (!mounted) setMountTimeout(true); }, 5000);
     return () => clearTimeout(t);
   }, [mounted]);
-  const [realWishes, setRealWishes] = useState<any[]>([]);
+  const [realWishes, setRealWishes] = useState<Wish[]>([]);
 
   // 控制图鉴面板的开关
   const [showCatalog, setShowCatalog] = useState(false);
@@ -200,22 +300,27 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     if (siteConfig?.enableLevelSystem !== true) return null;
 
     // 统计照片与友链 (纯发徽章，不加经验)
-    const totalPhotos = (albums || []).reduce((acc: number, curr: any) => acc + (curr.photos?.length || 0), 0);
+    const totalPhotos = (albums || []).reduce((acc: number, curr) => acc + (curr.photos?.length || 0), 0);
     const totalFriends = (friendsData || []).length;
 
-    const parseDateStr = (dateVal: any) => {
+    const parseDateStr = (dateVal: unknown) => {
       try {
-        const d = new Date(dateVal);
+        const d = dateVal instanceof Date
+          ? dateVal
+          : typeof dateVal === 'string' || typeof dateVal === 'number'
+            ? new Date(dateVal)
+            : null;
+        if (!d) return null;
         if (isNaN(d.getTime())) return null;
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      } catch (e) { return null; }
+      } catch { return null; }
     };
 
     const todayString = parseDateStr(new Date());
     let tp = 0, tc = 0, tm = 0;
     const uniqueDays = new Set();
 
-    const processItem = (item: any, type: string) => {
+    const processItem = (item: ContentItem, type: ExperienceCategory) => {
       if (item.date) {
         const ds = parseDateStr(item.date);
         if (ds) {
@@ -229,9 +334,9 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
       }
     };
 
-    posts.forEach((i: any) => processItem(i, 'p'));
-    chatters.forEach((i: any) => processItem(i, 'c'));
-    moments.forEach((i: any) => processItem(i, 'm'));
+    posts.forEach((item) => processItem(item, 'p'));
+    chatters.forEach((item) => processItem(item, 'c'));
+    moments.forEach((item) => processItem(item, 'm'));
 
     const postsExp = posts.length * 50;
     const chattersExp = chatters.length * 20;
@@ -263,7 +368,7 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     // ==========================================
     // 🛡️ 全图鉴生成器 (显式配置，精准控制)
     // ==========================================
-    const allCatalogBadges: any[] = [];
+    const allCatalogBadges: Badge[] = [];
     const ownedIds = new Set();
 
     // 1. 等级徽章配置 (1~50级满，10个阶段)
@@ -370,17 +475,24 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
         const { owner, repo } = siteConfig.gitalkConfig;
         const targetLabel = `workshop-${currentMonthStr}`;
         const issueRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues?labels=${targetLabel}`);
-        const issues = await issueRes.json();
-        if (issues && issues.length > 0) {
-          const commentsRes = await fetch(issues[0].comments_url);
-          const comments = await commentsRes.json();
+        const issues: unknown = await issueRes.json();
+        const issue = Array.isArray(issues) ? issues.find(isGitHubIssue) : undefined;
+        if (issue) {
+          const commentsRes = await fetch(issue.comments_url);
+          const comments: unknown = await commentsRes.json();
           if (isMounted && Array.isArray(comments)) {
-            setRealWishes(comments.map((c: any) => ({ id: c.id.toString(), content: c.body, author: c.user.login, type: 'wish', date: currentMonthStr + '-01' })));
+            setRealWishes(comments.filter(isGitHubComment).map((comment) => ({
+              id: comment.id.toString(),
+              content: comment.body,
+              author: comment.user.login,
+              type: 'wish',
+              date: `${currentMonthStr}-01`,
+            })));
             return;
           }
         }
         if (isMounted) setRealWishes([]);
-      } catch (err) { if (isMounted) setRealWishes([]); }
+      } catch { if (isMounted) setRealWishes([]); }
     };
     fetchGitalkComments();
     return () => { isMounted = false; };
@@ -390,10 +502,14 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     if (!mounted) return { shelvesData: [], stickyNotes: [], stats: { post: 0, chatter: 0, moment: 0, wish: 0 } };
 
     const isCurrentMonth = (dateStr: string) => dateStr && dateStr.startsWith(currentMonthStr);
-    const currentPosts = posts.filter((i: any) => isCurrentMonth(i.date));
-    const currentChatters = chatters.filter((i: any) => isCurrentMonth(i.date));
-    const currentMoments = moments.filter((i: any) => isCurrentMonth(i.date));
-    const currentFlasks = [...currentPosts, ...currentChatters, ...currentMoments];
+    const currentPosts = posts.filter((item) => isCurrentMonth(item.date));
+    const currentChatters = chatters.filter((item) => isCurrentMonth(item.date));
+    const currentMoments = moments.filter((item) => isCurrentMonth(item.date));
+    const currentFlasks = [
+      ...currentPosts.map((item) => ({ ...item, type: 'post' as const })),
+      ...currentChatters.map((item) => ({ ...item, type: 'chatter' as const })),
+      ...currentMoments.map((item) => ({ ...item, type: 'moment' as const })),
+    ];
 
     const monthStats = { post: currentPosts.length, chatter: currentChatters.length, moment: currentMoments.length, wish: realWishes.length };
 
@@ -410,13 +526,13 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     const requiredShelves = Math.ceil(shuffled.length / itemsPerShelf);
     const totalShelves = Math.max(6, requiredShelves);
 
-    const shelves = [];
+    const shelves: FlaskItem[][] = [];
     for (let i = 0; i < totalShelves; i++) shelves.push(shuffled.slice(i * itemsPerShelf, (i + 1) * itemsPerShelf));
 
     const colors = ['bg-yellow-200', 'bg-pink-200', 'bg-blue-200', 'bg-emerald-200'];
     const positionCounter: Record<string, number> = {};
 
-    const computedNotes = realWishes.map((wish, i) => {
+    const computedNotes: StickyNoteData[] = realWishes.map((wish, i) => {
       const seed = i * 10 + parseInt(currentMonthStr.replace('-',''));
       const shelfIndex = Math.floor(seededRandom(seed) * totalShelves);
       const side = seededRandom(seed + 1) > 0.5 ? 'left' : 'right';
