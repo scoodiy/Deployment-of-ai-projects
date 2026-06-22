@@ -4,6 +4,54 @@
 /* 1. 声明暗黑模式变体 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --home-bg: #f7f7f3;
+  --home-text: #252a26;
+  --home-muted: #687067;
+  --home-border: #dedfd8;
+  --home-accent: #64795a;
+}
+
+.dark {
+  --home-bg: #18201b;
+  --home-text: #f1f3ed;
+  --home-muted: #aeb8ac;
+  --home-border: #354138;
+  --home-accent: #a9bd91;
+}
+
+.home-surface {
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--home-bg) 88%, white);
+  box-shadow: 0 10px 30px rgb(35 42 38 / 6%);
+}
+
+.dark .home-surface {
+  background: color-mix(in srgb, var(--home-bg) 92%, black);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 18%);
+}
+
+.home-surface:hover {
+  border-color: color-mix(in srgb, var(--home-accent) 60%, var(--home-border));
+}
+
+.player-control {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--home-border);
+  color: var(--home-muted);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.player-control:hover {
+  border-color: var(--home-accent);
+  color: var(--home-accent);
+}
+
 /* 2. 基础环境与性能优化 */
 @layer base {
   :root {
@@ -12,18 +60,21 @@
 
   body {
     font-family: var(--font-serif);
-    @apply transition-colors duration-1000 text-slate-900 bg-slate-50;
+    color: var(--home-text);
+    background: var(--home-bg);
+    @apply transition-colors duration-500;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   .dark body {
-    @apply text-slate-100 bg-slate-950;
+    color: var(--home-text);
+    background: var(--home-bg);
   }
 
   h1, h2, h3, h4 {
     font-weight: 900;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   .dark .prose {
