@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import bcryptjs from 'bcryptjs';
+import { migrateCommentsTable } from './comments-migration';
 
 const DB_PATH = path.join(process.cwd(), 'data', 'ayuu.db');
 
@@ -169,25 +170,8 @@ function initTables(db: Database.Database) {
   db.exec("CREATE INDEX IF NOT EXISTS idx_likes_user ON likes(user_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_likes_target ON likes(target_type, target_id)");
 
-  // ---- 新表：评论（扩展支持 music/friend/project） ----
-  // 先检查旧表是否存在且缺少新字段，做迁移
-  const commentsTableInfo = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='comments'").get() as Record<string, unknown> | undefined;
-  if (commentsTableInfo) {
-    // 旧表存在，检查是否有 parent_id 和 updated_at 列
-    const cols = db.prepare("PRAGMA table_info(comments)").all() as Record<string, unknown>[];
-    const colNames = cols.map((c: any) => c.name as string);
-    if (!colNames.includes('parent_id')) {
-      // 重建表以扩展 CHECK 约束并添加新列
-      db.exec("ALTER TABLE comments RENAME TO comments_old");
-      db.exec("CREATE TABLE comments (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, target_type TEXT NOT NULL CHECK(target_type IN ('blog', 'media', 'music', 'friend', 'project')), target_id INTEGER NOT NULL, content TEXT NOT NULL, parent_id INTEGER DEFAULT NULL, status TEXT DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))");
-      db.exec("INSERT INTO comments (id, user_id, target_type, target_id, content, status, created_at, updated_at) SELECT id, user_id, target_type, target_id, content, status, created_at, created_at FROM comments_old");
-      db.exec("DROP TABLE comments_old");
-    }
-  } else {
-    db.exec("CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, target_type TEXT NOT NULL CHECK(target_type IN ('blog', 'media', 'music', 'friend', 'project')), target_id INTEGER NOT NULL, content TEXT NOT NULL, parent_id INTEGER DEFAULT NULL, status TEXT DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))");
-  }
-  db.exec("CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id)");
-  db.exec("CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)");
+  // ---- 评论：兼容旧 numeric target_id 并迁移至稳定文本 target_key ----
+  migrateCommentsTable(db);
 
   // ---- 新表：友链 ----
   db.exec(`CREATE TABLE IF NOT EXISTS friends (
