@@ -24,6 +24,7 @@ const menuGroups = [
     title: '互动管理',
     items: [
       { path: '/admin/comments', label: '评论管理', icon: '💬', description: '留言审核' },
+      { path: '/admin/ai', label: 'AI猫猫', icon: '🐾', description: '助理模型' },
       { path: '/admin/users', label: '用户管理', icon: '👥', description: '账号状态' },
       { path: '/admin/friends', label: '友链管理', icon: '🔗', description: '站点伙伴' },
     ],
