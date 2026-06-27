@@ -61,8 +61,17 @@ export default function SiteConfigPage() {
 
   const isImageField = (key: string) => /image|avatar|background|bg|logo|cover|icon|photo/i.test(key);
 
+  const aiConfigKeys = new Set([
+    "ai_api_url",
+    "ai_api_key",
+    "ai_model_id",
+    "ai_system_prompt",
+    "ai_max_output_tokens",
+    "ai_temperature",
+  ]);
+  const aiConfigs = configs.filter((c) => aiConfigKeys.has(c.config_key));
   const toggleConfigs = configs.filter((c) => c.config_key.startsWith("show_"));
-  const otherConfigs = configs.filter((c) => !c.config_key.startsWith("show_") && c.config_key !== "danmaku_list");
+  const otherConfigs = configs.filter((c) => !c.config_key.startsWith("show_") && c.config_key !== "danmaku_list" && !aiConfigKeys.has(c.config_key));
 
   const danmakuRaw = configs.find(c => c.config_key === "danmaku_list")?.config_value || "[]";
   let danmakuList: string[] = [];
@@ -155,6 +164,41 @@ export default function SiteConfigPage() {
                 </div>
               </div>
             </label>
+          ))}
+        </div>
+      </AdminCard>
+
+      <AdminCard className="p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-950">AI 猫猫助理设置</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            默认使用 Pollinations 免费匿名接口。后续可改为任意 OpenAI 兼容接口，Key 留空则不发送 Authorization。
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {aiConfigs.map((config) => (
+            <div key={config.config_key} className={config.config_key === "ai_system_prompt" ? "md:col-span-2" : ""}>
+              <label className="block text-slate-500 text-sm mb-1">{config.description || config.config_key}</label>
+              {config.config_key === "ai_system_prompt" ? (
+                <textarea
+                  value={config.config_value}
+                  onChange={(e) => updateValue(config.config_key, e.target.value)}
+                  className="h-36 w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400"
+                  placeholder="设置猫猫的性格、人设、回复风格..."
+                />
+              ) : (
+                <input
+                  type={config.config_key === "ai_api_key" ? "password" : config.config_key === "ai_max_output_tokens" || config.config_key === "ai_temperature" ? "number" : "text"}
+                  step={config.config_key === "ai_temperature" ? "0.05" : undefined}
+                  min={config.config_key === "ai_temperature" ? "0" : config.config_key === "ai_max_output_tokens" ? "16" : undefined}
+                  max={config.config_key === "ai_temperature" ? "2" : config.config_key === "ai_max_output_tokens" ? "1000" : undefined}
+                  value={config.config_value}
+                  onChange={(e) => updateValue(config.config_key, e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400"
+                  placeholder={config.config_key === "ai_api_url" ? "https://text.pollinations.ai/openai" : ""}
+                />
+              )}
+            </div>
           ))}
         </div>
       </AdminCard>

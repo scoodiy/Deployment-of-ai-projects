@@ -14,7 +14,13 @@ export const PUT = withAdminAuth(async (request, admin) => {
 
   const ip = getIp(request);
   const updateTransaction = db.transaction(() => {
-    const updateStmt = db.prepare('INSERT OR REPLACE INTO site_config (config_key, config_value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+    const updateStmt = db.prepare(`
+      INSERT INTO site_config (config_key, config_value, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(config_key) DO UPDATE SET
+        config_value = excluded.config_value,
+        updated_at = CURRENT_TIMESTAMP
+    `);
     const updates = Object.entries(body).filter(([k]) => !k.startsWith('_')) as [string, string][];
 
     for (const [key, value] of updates) {

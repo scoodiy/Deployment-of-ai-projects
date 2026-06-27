@@ -2,11 +2,32 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/user';
 import { checkRateLimit, getClientIp, trackFailure, resetFailures, getFailureBlockedUntil } from '@/lib/rate-limit';
 import { getDb } from '@/lib/db';
-import { siteConfig } from '../../../siteConfig';
+import { getSiteConfig } from '@/lib/site-config';
+
+type OpenAIChatResponse = {
+  choices?: Array<{
+    message?: { content?: string };
+    text?: string;
+  }>;
+  error?: { message?: string } | string;
+};
+
+function resolveChatEndpoint(apiUrl: string) {
+  const clean = apiUrl.trim().replace(/\/+$/, '');
+  if (!clean) return 'https://text.pollinations.ai/openai';
+  if (clean.endsWith('/openai') || clean.endsWith('/chat/completions')) return clean;
+  return `${clean}/chat/completions`;
+}
+
+function toNumber(value: string, fallback: number, min: number, max: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
 
 export async function POST(req: Request) {
   if (process.env.NODE_ENV === 'development') {
-    console.log("🚀 [1/5] 路由进入：开始对接 Gemini 3 脑回路");
+    console.log("🚀 [1/5] 路由进入：开始对接 AI 猫猫助理");
   }
 
   try {
@@ -60,63 +81,58 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: "消息长度不能超过 2000 字符" }), { status: 400 });
     }
 
-    const apiKey = (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || '').trim();
-
-    if (!apiKey) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("❌ 找不到 API Key");
-      }
-      return new Response(JSON.stringify({ error: "Key missing" }), { status: 500 });
-    }
-
-    const modelId = siteConfig.geminiConfig.modelId;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`;
+    const config = getSiteConfig();
+    const apiKey = (config.ai_api_key || process.env.OPENAI_API_KEY || '').trim();
+    const modelId = (config.ai_model_id || 'openai').trim();
+    const url = resolveChatEndpoint(config.ai_api_url);
+    const maxTokens = toNumber(config.ai_max_output_tokens, 150, 16, 1000);
+    const temperature = toNumber(config.ai_temperature, 0.85, 0, 2);
+    const systemPrompt = (config.ai_system_prompt || '').trim();
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`📡 [2/5] 正在呼叫模型: ${modelId}`);
     }
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
+      headers,
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{
-            text: siteConfig.geminiConfig.systemPrompt
-          }]
-        },
-        contents: [{
-          parts: [{ text: message }]
-        }],
-        generationConfig: {
-          maxOutputTokens: siteConfig.geminiConfig.maxOutputTokens,
-          temperature: siteConfig.geminiConfig.temperature,
-        }
+        model: modelId,
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          { role: 'user', content: message },
+        ],
+        max_tokens: maxTokens,
+        temperature,
       })
     });
 
-    const data = await response.json();
+    const data = await response.json() as OpenAIChatResponse;
 
     if (!response.ok) {
       if (process.env.NODE_ENV === 'development') {
-        console.error("🚨 Gemini 3 拒绝了请求:", JSON.stringify(data));
+        console.error("🚨 AI 服务拒绝了请求:", JSON.stringify(data));
       }
       const isBlocked = trackFailure(`aiFail:${ip}`, 5 * 60 * 1000, 3);
       return new Response(JSON.stringify({
         error: isBlocked ? `连续失败次数过多，请5分钟后再试` : `模型拒绝访问: ${response.status}`,
-        details: data.error?.message || "未知错误"
+        details: typeof data.error === 'string' ? data.error : data.error?.message || "未知错误"
       }), { status: response.status });
     }
 
     resetFailures(`aiFail:${ip}`);
 
     if (process.env.NODE_ENV === 'development') {
-      console.log("✅ [3/5] Google 成功响应");
+      console.log("✅ [3/5] AI 服务成功响应");
     }
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "本喵现在不想理你喵...";
+    const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "本喵现在不想理你喵...";
 
     if (process.env.NODE_ENV === 'development') {
       console.log("🎉 [4/5] 回复已生成，准备传回前端");
@@ -154,5 +170,10 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  return new Response(JSON.stringify({ status: "Ready", model: "Gemini 3 Flash Preview" }), { status: 200 });
+  const config = getSiteConfig();
+  return new Response(JSON.stringify({
+    status: "Ready",
+    model: config.ai_model_id || "openai",
+    endpoint: resolveChatEndpoint(config.ai_api_url),
+  }), { status: 200 });
 }

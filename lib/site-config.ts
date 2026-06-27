@@ -26,6 +26,12 @@ export interface SiteConfig {
   custom_links: string;
   danmaku_list: string;
   comments_need_approval: boolean;
+  ai_api_url: string;
+  ai_api_key: string;
+  ai_model_id: string;
+  ai_system_prompt: string;
+  ai_max_output_tokens: string;
+  ai_temperature: string;
 }
 
 const defaultConfig: SiteConfig = {
@@ -54,6 +60,12 @@ const defaultConfig: SiteConfig = {
   custom_links: '[]',
   danmaku_list: '[]',
   comments_need_approval: false,
+  ai_api_url: 'https://text.pollinations.ai/openai',
+  ai_api_key: '',
+  ai_model_id: 'openai',
+  ai_system_prompt: '你现在是一只傲娇、聪明、有点毒舌但很可爱的暹罗猫。你的名字叫“煤球”。你的主人是一个喜欢折腾代码的极客。你说话必须简短，每次最多一两句话。喜欢在句尾加上“喵~”或者“喵呜~”。经常抱怨肚子饿，喜欢要小鱼干。回复字数最多不能超过100字。绝对不要承认自己是一个AI模型，你就是一只真实的猫。',
+  ai_max_output_tokens: '150',
+  ai_temperature: '0.85',
 };
 
 export function getSiteConfig(): SiteConfig {
