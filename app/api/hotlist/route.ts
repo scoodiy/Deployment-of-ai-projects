@@ -43,7 +43,8 @@ async function fetchWeiboHot(): Promise<HotSource | null> {
       });
     }
     return { title: '微博热搜', data: items };
-  } catch {
+  } catch (e) {
+    console.error('Weibo hotlist error:', e);
     return null;
   }
 }
@@ -63,7 +64,8 @@ async function fetchBilibiliHot(): Promise<HotSource | null> {
       hot: item.heat_score || 0,
     }));
     return { title: 'B站热搜', data: items };
-  } catch {
+  } catch (e) {
+    console.error('Bilibili hotlist error:', e);
     return null;
   }
 }

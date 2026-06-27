@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
         );
         const geoData = await geoRes.json();
         resolvedCity = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || city;
-      } catch {
+      } catch (e) {
+        console.error('Geocoding error:', e);
         resolvedCity = city;
       }
     }

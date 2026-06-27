@@ -18,7 +18,7 @@ function getJwtSecret(): Uint8Array {
 }
 
 const TOKEN_NAME = 'admin_token';
-const TOKEN_EXPIRY = '7d';
+const TOKEN_EXPIRY = '2h';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, 10);
@@ -40,7 +40,8 @@ export async function verifyToken(token: string): Promise<Record<string, unknown
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as Record<string, unknown>;
-  } catch {
+  } catch (e) {
+    console.error('Token verification error:', e);
     return null;
   }
 }
@@ -73,7 +74,7 @@ export async function getAdminFromRequest(request: Request): Promise<Record<stri
 
 export function setTokenCookie(token: string): string {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  return `${TOKEN_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${7 * 24 * 60 * 60}`;
+  return `${TOKEN_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict${secure}; Max-Age=${2 * 60 * 60}`;
 }
 
 export function clearTokenCookie(): string {

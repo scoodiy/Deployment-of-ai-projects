@@ -27,7 +27,7 @@ export const DELETE = withAdminAuth<{ params: Promise<{ id: string }> }>(async (
   // Delete physical file
   try {
     await unlink(path.join(process.cwd(), 'public', file.url as string));
-  } catch {}
+  } catch (e) { console.error('File delete error:', e); }
 
   db.prepare('DELETE FROM media_files WHERE id = ?').run(id);
 

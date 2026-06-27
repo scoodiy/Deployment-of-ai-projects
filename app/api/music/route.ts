@@ -45,7 +45,8 @@ async function fetchFromNetEase(songId: string): Promise<SongResult> {
       try {
         const lrcData = await lrcRes.json()
         lrcText = lrcData.lrc?.lyric || ''
-      } catch {
+      } catch (e) {
+        console.error('Lyric parse error:', e);
         /* 歌词可选，失败不影响主流程 */
       }
     }
@@ -97,7 +98,8 @@ export async function GET(request: NextRequest) {
               const lrcData = await lrcRes.json()
               lrcText = lrcData.lrc?.lyric || ''
             }
-          } catch {
+          } catch (e) {
+            console.error('Lyric fetch error:', e);
             /* 歌词可选 */
           }
         }

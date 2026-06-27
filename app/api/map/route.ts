@@ -59,7 +59,8 @@ async function searchNominatim(query: string): Promise<MapResult[]> {
       location: `${item.lon},${item.lat}`,
       type: item.type || '',
     }));
-  } catch {
+  } catch (e) {
+    console.error('Nominatim search error:', e);
     return [];
   }
 }

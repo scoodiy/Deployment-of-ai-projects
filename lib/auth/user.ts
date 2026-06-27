@@ -38,7 +38,8 @@ export async function verifyUserToken(token: string): Promise<Record<string, unk
   try {
     const { payload } = await jwtVerify(token, getUserJwtSecret());
     return payload as Record<string, unknown>;
-  } catch {
+  } catch (e) {
+    console.error('User token verification error:', e);
     return null;
   }
 }

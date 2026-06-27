@@ -166,7 +166,7 @@ export const POST = withAdminAuth(async (request, admin) => {
     } catch (dbError) {
       // DB写入失败，清理已上传文件
       if (filePath) {
-        try { await unlink(filePath); } catch {}
+        try { await unlink(filePath); } catch (e) { console.error('File cleanup error:', e); }
       }
       throw dbError;
     }

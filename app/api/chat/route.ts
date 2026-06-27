@@ -134,7 +134,8 @@ export async function POST(req: Request) {
         reply.length > 500 ? reply.slice(0, 500) : reply,
         message.length + reply.length
       );
-    } catch {
+    } catch (e) {
+      console.error('AI usage log insert error:', e);
     }
 
     return new Response(JSON.stringify({ reply }), {

@@ -40,7 +40,8 @@ function formatUpdateTime(dateString: string): string {
     const mins = String(d.getMinutes()).padStart(2, '0');
     if (hours === '00' && mins === '00') return `${year}.${month}.${day}`;
     return `${year}.${month}.${day} ${hours}:${mins}`;
-  } catch {
+  } catch (e) {
+    console.error('Date format error:', e);
     return dateString;
   }
 }
@@ -50,7 +51,8 @@ function parseTags(rawTags: string | null | undefined): string[] {
   try {
     const parsed = JSON.parse(rawTags);
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : ['未分类'];
-  } catch {
+  } catch (e) {
+    console.error('Tag parse error:', e);
     return ['未分类'];
   }
 }
@@ -97,7 +99,7 @@ export function getPostBySlug(slug: string) {
     if (!blog) return null;
 
     let tags: string[] = [];
-    try { tags = JSON.parse(blog.tags || '[]'); } catch { tags = []; }
+    try { tags = JSON.parse(blog.tags || '[]'); } catch (e) { console.error('Tag parse error:', e); tags = []; }
 
     return {
       id: blog.id,
