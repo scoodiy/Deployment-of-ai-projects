@@ -5,9 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { siteConfig } from '../siteConfig';
 
 export default function SplashScreen() {
-  const [isMounted] = useState(() => true);
-  const hasSeenSplash = typeof window !== 'undefined' && sessionStorage.getItem('hasSeenSplash') === 'true';
-  const [show, setShow] = useState(() => !hasSeenSplash);
+  const [show, setShow] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const exitSplash = () => {
     setShow(false);
@@ -15,11 +14,15 @@ export default function SplashScreen() {
 
     setTimeout(() => {
       document.documentElement.classList.add('splash-seen');
-    }, 300);
+    }, 500);
   };
 
   useEffect(() => {
+    setIsMounted(true);
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash') === 'true';
+
     if (!hasSeenSplash) {
+      setShow(true);
       const timer = setTimeout(() => {
         exitSplash();
       }, 2200);
@@ -37,8 +40,8 @@ export default function SplashScreen() {
       {show && (
         <motion.div
           key="splash-screen-container"
-          exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
+          exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
           className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white dark:bg-slate-950"
         >
           <div className="relative z-10 flex flex-col items-center">
@@ -59,12 +62,12 @@ export default function SplashScreen() {
             </h1>
             <p className="text-[10px] font-black text-slate-400 tracking-[0.5em] mb-12">INITIALIZING SYSTEM</p>
 
-            <div className="w-40 h-[1.5px] bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
+            <div className="w-40 h-[1.5px] bg-slate-200 dark:bg-slate-800 relative">
               <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: "100%" }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-0 left-0 w-full h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1.8, ease: "easeInOut" }}
+                className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
               />
             </div>
           </div>
