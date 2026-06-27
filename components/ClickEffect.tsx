@@ -1,0 +1,94 @@
+"use client";
+import { useEffect, useRef } from 'react';
+
+class Ripple {
+  x: number; y: number;
+  r: number;
+  maxR: number;
+  opacity: number;
+  velocity: number;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+    this.r = 0;
+    this.maxR = 60;
+    this.opacity = 0.6;
+    this.velocity = 2.5;
+  }
+
+  update() {
+    this.r += this.velocity;
+    this.velocity *= 0.96;
+    this.opacity -= 0.015;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(129, 140, 248, ${this.opacity})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(129, 140, 248, ${this.opacity * 0.3})`;
+    ctx.fill();
+  }
+}
+
+export default function ClickEffect() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const ripples: Ripple[] = [];
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+
+    const handleClick = (e: MouseEvent) => {
+      ripples.push(new Ripple(e.clientX, e.clientY));
+    };
+
+    window.addEventListener('click', handleClick);
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = 'rgba(129, 140, 248, 0.5)';
+
+      for (let i = 0; i < ripples.length; i++) {
+        ripples[i].update();
+        ripples[i].draw(ctx);
+        if (ripples[i].opacity <= 0) {
+          ripples.splice(i, 1);
+          i--;
+        }
+      }
+      requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('click', handleClick);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none z-[9999]"
+    />
+  );
+}

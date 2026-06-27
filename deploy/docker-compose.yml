@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: stock-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret-key}
+      DEBUG: ${DEBUG:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ayuu.fun,http://localhost:5173}
+    ports:
+      - "127.0.0.1:9988:9988"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9988/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - stock-net
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: stock-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://backend:9988
+    networks:
+      - stock-net
+
+networks:
+  stock-net:
+    driver: bridge

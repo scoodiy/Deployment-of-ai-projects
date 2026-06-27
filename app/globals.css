@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* 1. 声明暗黑模式变体 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --home-bg: #f7f7f3;
+  --home-text: #252a26;
+  --home-muted: #687067;
+  --home-border: #dedfd8;
+  --home-accent: #64795a;
+}
+
+.dark {
+  --home-bg: #18201b;
+  --home-text: #f1f3ed;
+  --home-muted: #aeb8ac;
+  --home-border: #354138;
+  --home-accent: #a9bd91;
+}
+
+.home-surface {
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--home-bg) 44%, white);
+  box-shadow: 0 10px 30px rgb(35 42 38 / 6%);
+}
+
+.dark .home-surface {
+  background: color-mix(in srgb, var(--home-bg) 46%, black);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 18%);
+}
+
+.home-surface:hover {
+  border-color: color-mix(in srgb, var(--home-accent) 60%, var(--home-border));
+}
+
+.player-control {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--home-border);
+  color: var(--home-muted);
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.player-control:hover {
+  border-color: var(--home-accent);
+  color: var(--home-accent);
+}
+
+/* 2. 基础环境与性能优化 */
+@layer base {
+  :root {
+    --font-serif: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-serif);
+    color: var(--home-text);
+    background: var(--home-bg);
+    @apply transition-colors duration-500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark body {
+    color: var(--home-text);
+    background: var(--home-bg);
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .dark .prose {
+    --tw-prose-body: var(--color-slate-200);
+    --tw-prose-headings: var(--color-white);
+    --tw-prose-links: var(--color-indigo-400);
+  }
+
+  [class*="backdrop-blur-"] {
+    will-change: backdrop-filter;
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .group:hover img {
+    will-change: transform;
+  }
+}
+
+/* 3. 音乐播放器进度条样式 */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #6366f1;
+  cursor: pointer;
+}
+
+/* 4. 火狐专项优化与布局兜底 */
+@layer base {
+  [class*="backdrop-blur-"] {
+    will-change: backdrop-filter;
+  }
+
+  @-moz-document url-prefix() {
+    [class*="backdrop-blur-md"] {
+      backdrop-filter: blur(8px) !important;
+    }
+  }
+
+  html, body {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* ========================================================
+   5. 全局滚动条美化 (Chrome, Edge, Safari)
+   ======================================================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+/* ========================================================
+   6. Firefox 浏览器的兼容写法
+   ======================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+/* 彻底隐藏所有数字输入框的上下滑动箭头 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield; /* 针对 Firefox 的兼容 */
+}
+
+/* 修复 Tailwind Prose 抹除列表符号的问题 */
+.prose ul { list-style-type: disc !important; padding-left: 1.5em !important; }
+.prose ol { list-style-type: decimal !important; padding-left: 1.5em !important; }
+.prose ul[data-type="taskList"] { list-style-type: none !important; padding-left: 0 !important; }
+.prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.prose ul[data-type="taskList"] input[type="checkbox"] {
+  margin-top: 0.5rem;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+/* 自定义滚动条美化 */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.2); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.4); }
+
+/* ========================================================
+   7. prefers-reduced-motion: 为敏感用户关闭复杂动画
+   ======================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .rotating-disc { animation: none !important; }
+  [class*="backdrop-blur-"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}
+
+/* ========================================================
+   8. 移动端性能优化：减少重度滤镜
+   ======================================================== */
+@media (max-width: 768px) {
+  [class*="backdrop-blur-xl"],
+  [class*="backdrop-blur-2xl"],
+  [class*="backdrop-blur-3xl"] {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+}
