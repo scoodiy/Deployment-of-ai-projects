@@ -16,8 +16,6 @@ import { UserProvider } from '../components/UserProvider';
 import { ToastProvider } from '../components/ToastProvider';
 import { PublicAnnouncementBanner, PublicOverlays } from '../components/PublicChrome';
 
-import Script from 'next/script';
-
 // 获取数据库配置，失败时回退到静态配置
 const dbConfig = getSiteConfig();
 const siteConfig = {
@@ -94,15 +92,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           }}
         />
 
-        <Script id="handle-splash-logic" strategy="beforeInteractive">
-          {`
-            try {
-              if (sessionStorage.getItem('hasSeenSplash') === 'true') {
-                document.documentElement.classList.add('splash-seen');
-              }
-            } catch (e) {}
-          `}
-        </Script>
       </head>
 
       <body className="w-screen overflow-x-hidden min-h-full flex flex-col relative transition-colors duration-1000 bg-slate-50 dark:bg-slate-950 font-serif">

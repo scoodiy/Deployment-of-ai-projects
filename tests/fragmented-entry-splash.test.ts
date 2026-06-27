@@ -17,11 +17,12 @@ test('fragmented entry splash exposes the intended entrance actions', () => {
   assert.match(source, /href="\/login"/);
 });
 
-test('fragmented entry splash keeps the existing session reveal contract', () => {
+test('fragmented entry splash reveals the app on explicit entry without session skipping', () => {
   const source = readSplash();
 
-  assert.match(source, /hasSeenSplash/);
-  assert.match(source, /sessionStorage\.setItem\('hasSeenSplash', 'true'\)/);
+  assert.doesNotMatch(source, /sessionStorage/);
+  assert.doesNotMatch(source, /hasSeenSplash/);
+  assert.match(source, /const enterSite = \(\) =>/);
   assert.match(source, /document\.documentElement\.classList\.add\('splash-seen'\)/);
 });
 
