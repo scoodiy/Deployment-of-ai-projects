@@ -4,9 +4,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const splashPath = path.join(process.cwd(), 'components', 'SplashScreen.tsx');
+const layoutPath = path.join(process.cwd(), 'app', 'layout.tsx');
 
 function readSplash() {
   return readFileSync(splashPath, 'utf8');
+}
+
+function readLayout() {
+  return readFileSync(layoutPath, 'utf8');
 }
 
 test('fragmented entry splash exposes the intended entrance actions', () => {
@@ -17,12 +22,19 @@ test('fragmented entry splash exposes the intended entrance actions', () => {
   assert.match(source, /href="\/login"/);
 });
 
-test('fragmented entry splash reveals the app on explicit entry without session skipping', () => {
+test('fragmented entry splash remembers explicit entry for the current browser session', () => {
   const source = readSplash();
 
-  assert.doesNotMatch(source, /sessionStorage/);
-  assert.doesNotMatch(source, /hasSeenSplash/);
   assert.match(source, /const enterSite = \(\) =>/);
+  assert.match(source, /sessionStorage\.setItem\('hasEnteredSplash', 'true'\)/);
+  assert.match(source, /document\.documentElement\.classList\.add\('splash-seen'\)/);
+});
+
+test('root layout reveals the app before hydration when the entry was already accepted', () => {
+  const source = readLayout();
+
+  assert.match(source, /import Script from 'next\/script'/);
+  assert.match(source, /sessionStorage\.getItem\('hasEnteredSplash'\) === 'true'/);
   assert.match(source, /document\.documentElement\.classList\.add\('splash-seen'\)/);
 });
 

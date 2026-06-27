@@ -22,6 +22,12 @@ export default function SplashScreen() {
 
   useEffect(() => {
     setIsMounted(true);
+    const hasEnteredSplash = sessionStorage.getItem('hasEnteredSplash') === 'true';
+
+    if (hasEnteredSplash) {
+      document.documentElement.classList.add('splash-seen');
+      return;
+    }
 
     setShow(true);
     const readyTimer = setTimeout(() => setPhase('ready'), 1300);
@@ -31,6 +37,7 @@ export default function SplashScreen() {
   const enterSite = () => {
     if (phase === 'exiting') return;
     setPhase('exiting');
+    sessionStorage.setItem('hasEnteredSplash', 'true');
 
     setTimeout(() => {
       document.documentElement.classList.add('splash-seen');
