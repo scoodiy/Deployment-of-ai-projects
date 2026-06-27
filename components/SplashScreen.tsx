@@ -4,35 +4,50 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { siteConfig } from '../siteConfig';
 
+type SplashPhase = 'assembling' | 'ready' | 'exiting';
+
+const fragments = [
+  { id: 'north-west', className: 'left-4 top-6 h-20 w-28 md:left-16 md:top-14 md:h-28 md:w-40', initial: { x: -120, y: -80, rotate: -18 }, exit: { x: -160, y: -120, rotate: -24 } },
+  { id: 'north-east', className: 'right-5 top-10 h-16 w-24 md:right-20 md:top-20 md:h-24 md:w-36', initial: { x: 120, y: -90, rotate: 16 }, exit: { x: 150, y: -130, rotate: 26 } },
+  { id: 'west', className: 'left-8 top-1/2 h-24 w-16 md:left-28 md:h-36 md:w-24', initial: { x: -150, y: 20, rotate: 12 }, exit: { x: -180, y: 40, rotate: -18 } },
+  { id: 'east', className: 'right-8 top-1/2 h-24 w-16 md:right-28 md:h-36 md:w-24', initial: { x: 150, y: -20, rotate: -12 }, exit: { x: 180, y: -40, rotate: 18 } },
+  { id: 'south-west', className: 'bottom-12 left-10 h-16 w-28 md:bottom-20 md:left-24 md:h-24 md:w-44', initial: { x: -100, y: 100, rotate: 20 }, exit: { x: -130, y: 130, rotate: 32 } },
+  { id: 'south-east', className: 'bottom-10 right-10 h-20 w-24 md:bottom-24 md:right-28 md:h-28 md:w-40', initial: { x: 110, y: 110, rotate: -20 }, exit: { x: 140, y: 140, rotate: -34 } },
+];
+
 export default function SplashScreen() {
   const [show, setShow] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-
-  const exitSplash = () => {
-    setShow(false);
-    sessionStorage.setItem('hasSeenSplash', 'true');
-
-    setTimeout(() => {
-      document.documentElement.classList.add('splash-seen');
-    }, 500);
-  };
+  const [phase, setPhase] = useState<SplashPhase>('assembling');
 
   useEffect(() => {
     setIsMounted(true);
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash') === 'true';
 
-    if (!hasSeenSplash) {
-      setShow(true);
-      const timer = setTimeout(() => {
-        exitSplash();
-      }, 2200);
-      return () => clearTimeout(timer);
-    } else {
+    if (hasSeenSplash) {
       document.documentElement.classList.add('splash-seen');
+      return;
     }
+
+    setShow(true);
+    const readyTimer = setTimeout(() => setPhase('ready'), 1300);
+    return () => clearTimeout(readyTimer);
   }, []);
 
-  // SSR 时不渲染，避免 hydration mismatch
+  const enterSite = () => {
+    if (phase === 'exiting') return;
+    setPhase('exiting');
+    sessionStorage.setItem('hasSeenSplash', 'true');
+
+    setTimeout(() => {
+      document.documentElement.classList.add('splash-seen');
+    }, 420);
+
+    setTimeout(() => {
+      setShow(false);
+    }, 920);
+  };
+
   if (!isMounted) return null;
 
   return (
@@ -40,36 +55,74 @@ export default function SplashScreen() {
       {show && (
         <motion.div
           key="splash-screen-container"
-          exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white dark:bg-slate-950"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.45, ease: 'easeInOut' }}
+          className="fixed inset-0 z-[100000] overflow-hidden bg-slate-950 text-white"
         >
-          <div className="relative z-10 flex flex-col items-center">
-            {/* 头像光环 */}
-            <div className="relative w-24 h-24 mb-8">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-60 blur-[3px]"
-              />
-              <div className="relative w-full h-full rounded-full p-1.5 bg-white dark:bg-slate-900 shadow-xl">
-                <img src={siteConfig.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.28),_transparent_36%),radial-gradient(circle_at_bottom,_rgba(236,72,153,0.18),_transparent_32%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(30,27,75,0.94))]"
+            animate={{ opacity: phase === 'exiting' ? 0 : 1, scale: phase === 'exiting' ? 1.08 : 1 }}
+            transition={{ duration: 0.8, ease: 'easeInOut' }}
+          />
+
+          {fragments.map((fragment, index) => (
+            <motion.div
+              aria-hidden="true"
+              key={fragment.id}
+              className={`absolute rounded-[1.5rem] border border-white/15 bg-white/8 shadow-2xl shadow-indigo-950/40 backdrop-blur-xl ${fragment.className}`}
+              initial={{ opacity: 0, scale: 0.86, ...fragment.initial }}
+              animate={phase === 'exiting'
+                ? { opacity: 0, scale: 0.72, filter: 'blur(18px)', ...fragment.exit }
+                : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, filter: 'blur(0px)' }}
+              transition={{ delay: phase === 'exiting' ? index * 0.025 : index * 0.1, duration: phase === 'exiting' ? 0.7 : 0.85, ease: 'easeOut' }}
+            />
+          ))}
+
+          <div className="relative z-10 flex min-h-screen items-center justify-center px-5">
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.94 }}
+              animate={phase === 'exiting'
+                ? { opacity: 0, y: -18, scale: 0.9, filter: 'blur(16px)' }
+                : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              transition={{ delay: phase === 'assembling' ? 0.55 : 0, duration: phase === 'exiting' ? 0.55 : 0.75, ease: 'easeOut' }}
+              className="relative w-full max-w-[26rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/12 p-6 text-center shadow-[0_24px_80px_rgba(15,23,42,0.55)] backdrop-blur-2xl md:p-8"
+            >
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent" />
+              <div className="relative">
+                <div className="mx-auto mb-5 h-20 w-20 rounded-3xl border border-white/20 bg-white/10 p-1.5 shadow-xl shadow-indigo-950/40 md:h-24 md:w-24">
+                  <img src={siteConfig.avatarUrl} alt="" className="h-full w-full rounded-[1.25rem] object-cover" />
+                </div>
+
+                <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.36em] text-indigo-200/80">
+                  ENTRY GATE ONLINE
+                </p>
+                <h1 className="text-2xl font-black leading-tight text-white md:text-3xl">
+                  {siteConfig.authorName}
+                </h1>
+                <p className="mt-3 text-sm leading-6 text-slate-200/80">
+                  正在拼装通往宝藏之地的入口
+                </p>
+
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={enterSite}
+                    disabled={phase === 'exiting'}
+                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl bg-indigo-400 px-5 text-sm font-black text-slate-950 shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    进入宝藏之地
+                  </button>
+                  <a
+                    href="/login"
+                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-white/15 bg-white/10 px-5 text-sm font-bold text-white transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40"
+                  >
+                    登录 / 注册
+                  </a>
+                </div>
               </div>
-            </div>
-
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-[0.2em] uppercase">
-              {siteConfig.authorName}
-            </h1>
-            <p className="text-[10px] font-black text-slate-400 tracking-[0.5em] mb-12">INITIALIZING SYSTEM</p>
-
-            <div className="w-40 h-[1.5px] bg-slate-200 dark:bg-slate-800 relative">
-              <motion.div
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 1.8, ease: "easeInOut" }}
-                className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
-              />
-            </div>
+            </motion.div>
           </div>
         </motion.div>
       )}
