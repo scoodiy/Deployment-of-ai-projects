@@ -7,12 +7,12 @@ import { siteConfig } from '../siteConfig';
 type SplashPhase = 'assembling' | 'ready' | 'exiting';
 
 const fragments = [
-  { id: 'north-west', className: 'left-4 top-6 h-20 w-28 md:left-16 md:top-14 md:h-28 md:w-40', initial: { x: -120, y: -80, rotate: -18 }, exit: { x: -160, y: -120, rotate: -24 } },
-  { id: 'north-east', className: 'right-5 top-10 h-16 w-24 md:right-20 md:top-20 md:h-24 md:w-36', initial: { x: 120, y: -90, rotate: 16 }, exit: { x: 150, y: -130, rotate: 26 } },
-  { id: 'west', className: 'left-8 top-1/2 h-24 w-16 md:left-28 md:h-36 md:w-24', initial: { x: -150, y: 20, rotate: 12 }, exit: { x: -180, y: 40, rotate: -18 } },
-  { id: 'east', className: 'right-8 top-1/2 h-24 w-16 md:right-28 md:h-36 md:w-24', initial: { x: 150, y: -20, rotate: -12 }, exit: { x: 180, y: -40, rotate: 18 } },
-  { id: 'south-west', className: 'bottom-12 left-10 h-16 w-28 md:bottom-20 md:left-24 md:h-24 md:w-44', initial: { x: -100, y: 100, rotate: 20 }, exit: { x: -130, y: 130, rotate: 32 } },
-  { id: 'south-east', className: 'bottom-10 right-10 h-20 w-24 md:bottom-24 md:right-28 md:h-28 md:w-40', initial: { x: 110, y: 110, rotate: -20 }, exit: { x: 140, y: 140, rotate: -34 } },
+  { id: 'top-left', className: '-left-3 top-0 h-24 w-[54%] rounded-tl-[2rem]', initial: { x: -190, y: -120, rotate: -18 }, exit: { x: -170, y: -130, rotate: -26 } },
+  { id: 'top-right', className: '-right-3 top-4 h-20 w-[48%] rounded-tr-[2rem]', initial: { x: 180, y: -110, rotate: 16 }, exit: { x: 160, y: -120, rotate: 26 } },
+  { id: 'middle-left', className: '-left-6 top-24 h-32 w-[32%] md:top-28 md:h-36', initial: { x: -210, y: 18, rotate: 10 }, exit: { x: -190, y: 44, rotate: -18 } },
+  { id: 'middle-right', className: '-right-6 top-24 h-32 w-[32%] md:top-28 md:h-36', initial: { x: 210, y: -18, rotate: -10 }, exit: { x: 190, y: -44, rotate: 18 } },
+  { id: 'bottom-left', className: '-left-2 bottom-3 h-20 w-[46%] rounded-bl-[2rem]', initial: { x: -150, y: 135, rotate: 20 }, exit: { x: -150, y: 145, rotate: 32 } },
+  { id: 'bottom-right', className: '-right-2 bottom-0 h-24 w-[55%] rounded-br-[2rem]', initial: { x: 165, y: 130, rotate: -20 }, exit: { x: 150, y: 150, rotate: -34 } },
 ];
 
 export default function SplashScreen() {
@@ -67,18 +67,21 @@ export default function SplashScreen() {
             transition={{ duration: 0.8, ease: 'easeInOut' }}
           />
 
-          {fragments.map((fragment, index) => (
-            <motion.div
-              aria-hidden="true"
-              key={fragment.id}
-              className={`absolute rounded-[1.5rem] border border-white/15 bg-white/8 shadow-2xl shadow-indigo-950/40 backdrop-blur-xl ${fragment.className}`}
-              initial={{ opacity: 0, scale: 0.86, ...fragment.initial }}
-              animate={phase === 'exiting'
-                ? { opacity: 0, scale: 0.72, filter: 'blur(18px)', ...fragment.exit }
-                : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, filter: 'blur(0px)' }}
-              transition={{ delay: phase === 'exiting' ? index * 0.025 : index * 0.1, duration: phase === 'exiting' ? 0.7 : 0.85, ease: 'easeOut' }}
-            />
-          ))}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center px-5">
+            <div className="relative h-[21.5rem] w-full max-w-[27.5rem] md:h-[23.5rem] md:max-w-[29rem]">
+              {fragments.map((fragment, index) => (
+                <motion.div
+                  key={fragment.id}
+                  className={`absolute border border-white/15 bg-white/8 shadow-2xl shadow-indigo-950/40 backdrop-blur-xl ${fragment.className}`}
+                  initial={{ opacity: 0, scale: 0.86, ...fragment.initial }}
+                  animate={phase === 'exiting'
+                    ? { opacity: 0, scale: 0.72, filter: 'blur(18px)', ...fragment.exit }
+                    : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0, filter: 'blur(0px)' }}
+                  transition={{ delay: phase === 'exiting' ? index * 0.025 : index * 0.1, duration: phase === 'exiting' ? 0.7 : 0.85, ease: 'easeOut' }}
+                />
+              ))}
+            </div>
+          </div>
 
           <div className="relative z-10 flex min-h-screen items-center justify-center px-5">
             <motion.div
