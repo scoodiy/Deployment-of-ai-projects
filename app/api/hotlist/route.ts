@@ -94,6 +94,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: sources });
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'hotlist api error' }, { status: 502 });
+    return NextResponse.json({ error: '服务暂时不可用' }, { status: 502 });
   }
 }

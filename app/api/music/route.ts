@@ -67,7 +67,7 @@ async function fetchFromNetEase(songId: string): Promise<SongResult> {
     if (process.env.NODE_ENV === 'development') {
       console.error(`[api/music] 获取歌曲 ${songId} 失败:`, error);
     }
-    return { id: songId, error: String(error) }
+    return { id: songId, error: '服务暂时不可用' }
   }
 }
 

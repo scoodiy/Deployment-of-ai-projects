@@ -110,6 +110,6 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV === 'development') {
       console.error('Upload avatar error:', error);
     }
-    return NextResponse.json({ error: error instanceof Error ? error.message : '上传失败' }, { status: 500 });
+    return NextResponse.json({ error: '上传失败，请稍后重试' }, { status: 500 });
   }
 }
