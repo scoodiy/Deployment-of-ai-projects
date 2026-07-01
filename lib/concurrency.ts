@@ -142,6 +142,12 @@ export function idempotentFavorite(
   targetId: number
 ): { success: boolean; alreadyFavorited?: boolean; favoriteId?: number; message: string } {
   const db = getDb();
+
+  const ALLOWED_TARGET_TYPES = ['blog', 'post', 'comment', 'moment', 'photo'];
+  if (!ALLOWED_TARGET_TYPES.includes(targetType)) {
+    throw new Error('Invalid target type');
+  }
+
   
   // 检查是否已收藏
   const existing = db.prepare('SELECT id FROM favorites WHERE user_id = ? AND target_type = ? AND target_id = ?')
@@ -173,6 +179,12 @@ export function idempotentUnfavorite(
   targetId: number
 ): { success: boolean; message: string } {
   const db = getDb();
+
+  const ALLOWED_TARGET_TYPES = ['blog', 'post', 'comment', 'moment', 'photo'];
+  if (!ALLOWED_TARGET_TYPES.includes(targetType)) {
+    throw new Error('Invalid target type');
+  }
+
   
   db.prepare('DELETE FROM favorites WHERE user_id = ? AND target_type = ? AND target_id = ?')
     .run(userId, targetType, targetId);
@@ -189,6 +201,12 @@ export function idempotentLike(
   targetId: number
 ): { success: boolean; alreadyLiked?: boolean; likeId?: number; message: string } {
   const db = getDb();
+
+  const ALLOWED_TARGET_TYPES = ['blog', 'post', 'comment', 'moment', 'photo'];
+  if (!ALLOWED_TARGET_TYPES.includes(targetType)) {
+    throw new Error('Invalid target type');
+  }
+
   
   const existing = db.prepare('SELECT id FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?')
     .get(userId, targetType, targetId) as Record<string, unknown> | undefined;
@@ -218,6 +236,12 @@ export function idempotentUnlike(
   targetId: number
 ): { success: boolean; message: string } {
   const db = getDb();
+
+  const ALLOWED_TARGET_TYPES = ['blog', 'post', 'comment', 'moment', 'photo'];
+  if (!ALLOWED_TARGET_TYPES.includes(targetType)) {
+    throw new Error('Invalid target type');
+  }
+
   
   db.prepare('DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?')
     .run(userId, targetType, targetId);
