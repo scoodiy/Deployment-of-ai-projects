@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 /**
  * Storage provider interface for file uploads.
  * Implementations: LocalStorage (current), R2Storage, OSSStorage (future)
@@ -20,9 +22,21 @@ export class LocalStorage implements StorageProvider {
     this.baseUrl = baseUrl;
   }
 
+  private validateKey(key: string): void {
+    // 检查非法字符
+    if (/[\\/:*?"<>|]/.test(key) || key.includes('..')) {
+      throw new Error('Invalid file key: path traversal or illegal characters detected');
+    }
+  }
+
   async upload(buffer: Buffer, key: string, _contentType: string): Promise<string> {
+    this.validateKey(key);
     const fs = await import('fs');
     const path = await import('path');
+    const finalPath = path.resolve(this.baseDir, key);
+    if (!finalPath.startsWith(path.resolve(this.baseDir))) {
+      throw new Error('Invalid file key: path traversal detected');
+    }
     const filePath = path.join(this.baseDir, key);
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -31,8 +45,13 @@ export class LocalStorage implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
+    this.validateKey(key);
     const fs = await import('fs');
     const path = await import('path');
+    const finalPath = path.resolve(this.baseDir, key);
+    if (!finalPath.startsWith(path.resolve(this.baseDir))) {
+      throw new Error('Invalid file key: path traversal detected');
+    }
     const filePath = path.join(this.baseDir, key);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
@@ -76,6 +95,6 @@ export function generateFileKey(originalName: string, prefix = ''): string {
   const ext = originalName.split('.').pop() || 'bin';
   const date = new Date();
   const datePath = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-  const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const unique = `${Date.now()}-${randomUUID().slice(0, 12)}`;
   return `${prefix}${datePath}/${unique}.${ext}`;
 }
