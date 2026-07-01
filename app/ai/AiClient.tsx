@@ -14,6 +14,7 @@ const EXAMPLE_QUESTIONS = [
 ];
 
 type Message = {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 };
@@ -37,7 +38,7 @@ export default function AiClient() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: text.trim() };
+    const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: text.trim() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
@@ -47,7 +48,10 @@ export default function AiClient() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text.trim() }),
+        body: JSON.stringify({
+          message: text.trim(),
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+        }),
       });
 
       const data = await res.json();
@@ -57,6 +61,7 @@ export default function AiClient() {
       }
 
       const assistantMessage: Message = {
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: data.reply || '抱歉，我没有理解你的意思。',
       };
@@ -119,9 +124,9 @@ export default function AiClient() {
             )}
 
             <AnimatePresence>
-              {messages.map((msg, i) => (
+              {messages.map((msg) => (
                 <motion.div
-                  key={i}
+                  key={msg.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}

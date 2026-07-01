@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, useCallback, ReactNode } from 'react';
 import { siteConfig } from '../siteConfig';
 
 interface RawSongEntry {
@@ -110,6 +110,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [currentLyric, setCurrentLyric] = useState("ONLINE");
   const [isLoading, setIsLoading] = useState(false);
   const [hasUserActivated, setHasUserActivated] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // 🌟 2. 新增音量和播放模式状态
   const [volume, setVolumeState] = useState(1);
@@ -119,17 +120,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const hasFetchedRef = useRef(false);
 
-  const fetchMusicData = () => {
+  // 🌟 合并后的 fetchMusicData — 使用 useCallback，接受 AbortSignal
+  const fetchMusicData = useCallback((signal: AbortSignal) => {
     if (hasFetchedRef.current || siteConfig.cloudMusicIds?.length === 0) return;
     hasFetchedRef.current = true;
     setIsLoading(true);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
     (async () => {
       try {
-        const res = await fetch('/api/music', { signal: controller.signal });
+        const res = await fetch('/api/music', { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const rawResults = await res.json();
 
@@ -164,62 +163,35 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setCurrentLyric("网络初始化失败");
         }
         setIsLoading(false);
-      } finally {
-        clearTimeout(timeoutId);
       }
     })();
-  };
+  }, []);
 
-  const retryFetch = () => {
+  // 🌟 简化的 retryFetch
+  const retryFetch = useCallback(() => {
     setHasUserActivated(true);
     hasFetchedRef.current = false;
     setPlaylist([]);
     setIsLoading(true);
+    setRetryCount(c => c + 1);
+  }, []);
 
+  // 🌟 初始加载 useEffect
+  useEffect(() => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
+    fetchMusicData(controller.signal);
+    return () => clearTimeout(timeoutId);
+  }, [fetchMusicData]);
 
-    (async () => {
-      try {
-        const res = await fetch('/api/music', { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const rawResults = await res.json();
-        const mergedPlaylist: MusicTrack[] = rawResults
-          .filter((song: RawSongEntry) => song && song.url && !song.error)
-          .map((song: RawSongEntry) => ({
-            id: song.id || Math.random().toString(),
-            title: song.name || '未知歌曲',
-            artist: song.artist || song.author || '未知歌手',
-            cover: song.cover || song.pic || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
-            src: song.url!,
-            lrcUrl: null,
-            lyrics: song.lrc ? parseLrc(song.lrc) : []
-          }));
-        hasFetchedRef.current = true;
-        if (mergedPlaylist.length > 0) {
-          setPlaylist(mergedPlaylist);
-          try { localStorage.setItem('music_playlist', JSON.stringify(mergedPlaylist)); } catch {}
-          setIsLoading(false);
-          setTimeout(() => {
-            if (audioRef.current) {
-              audioRef.current.play().catch(() => {});
-              setIsPlaying(true);
-            }
-          }, 100);
-        } else {
-          setCurrentLyric("云端链路受阻");
-          setIsLoading(false);
-        }
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          setCurrentLyric("网络初始化失败");
-        }
-        setIsLoading(false);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    })();
-  };
+  // 🌟 retryFetch 的 useEffect，依赖 retryCount
+  useEffect(() => {
+    if (retryCount === 0) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    fetchMusicData(controller.signal);
+    return () => clearTimeout(timeoutId);
+  }, [retryCount, fetchMusicData]);
 
   useEffect(() => {
     if (playlist.length === 0) return;
@@ -268,7 +240,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const togglePlay = () => {
     setHasUserActivated(true);
     if (playlist.length === 0) {
-      fetchMusicData();
+      retryFetch();
       return;
     }
 

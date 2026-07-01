@@ -102,7 +102,9 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
           });
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+  console.error('[SiteConfig] 加载站点配置失败，使用默认配置:' , err);
+});
   }, []);
 
   return (

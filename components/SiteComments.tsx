@@ -53,13 +53,10 @@ export default function SiteComments({ targetType, targetId }: SiteCommentsProps
     setSubmitting(true);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('user_token') : null;
       const res = await fetch('/api/comments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           target_type: targetType,
           target_id: Number(targetId),
@@ -86,12 +83,9 @@ export default function SiteComments({ targetType, targetId }: SiteCommentsProps
     setDeletingId(id);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('user_token') : null;
       const res = await fetch(`/api/comments/${id}`, {
         method: 'DELETE',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        credentials: 'same-origin',
       });
 
       if (res.ok) {
@@ -132,20 +126,7 @@ export default function SiteComments({ targetType, targetId }: SiteCommentsProps
     return date.toLocaleDateString('zh-CN');
   };
 
-  // 获取当前用户ID（从 user_token 解析或匹配 user_id）
-  const getCurrentUserId = (): number | null => {
-    if (typeof window === 'undefined') return null;
-    const token = localStorage.getItem('user_token');
-    if (!token) return null;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId as number;
-    } catch {
-      return null;
-    }
-  };
-
-  const currentUserId = getCurrentUserId();
+  const currentUserId = user?.id;
 
   return (
     <div className="w-full">

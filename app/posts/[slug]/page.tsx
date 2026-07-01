@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 
@@ -144,6 +145,18 @@ async function getPostData(slug: string) {
     .use(remarkGfm)
     .use(remarkMath)
     .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeSanitize, {
+      ...defaultSchema,
+      attributes: {
+        ...defaultSchema.attributes,
+        code: [...(defaultSchema.attributes?.code || []), 'className'],
+        span: [...(defaultSchema.attributes?.span || []), 'className', 'style'],
+        pre: [...(defaultSchema.attributes?.pre || []), 'className'],
+        div: [...(defaultSchema.attributes?.div || []), 'className', 'style'],
+        img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'title', 'loading'],
+      },
+      tagNames: [...(defaultSchema.tagNames || []), 'br', 'img', 'details', 'summary'],
+    })
     .use(rehypeHighlight, {
       detect: true,
       ignoreMissing: true,

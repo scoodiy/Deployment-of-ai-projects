@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev-secret-key-not-for-production' : (() => { throw new Error('生产环境必须配置 JWT_SECRET 环境变量'); })())
-);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret && process.env.NODE_ENV === 'production') {
+  throw new Error('❌ JWT_SECRET 环境变量未设置！生产环境必须配置安全密钥。');
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecret || 'dev-secret-key-not-for-production');
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -1,8 +1,8 @@
 'use client';
-
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface User {
+  id?: number;
   nickname?: string;
   username: string;
   email: string;
@@ -13,49 +13,42 @@ interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   setUser: () => {},
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const token = localStorage.getItem('user_token');
-    if (!token) {
-      localStorage.removeItem('user_info');
-      return null;
-    }
-    const saved = localStorage.getItem('user_info');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
+  const [user, setUser] = useState<User | null>(null);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user/profile', { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user || null);
+      } else {
+        setUser(null);
       }
+    } catch {
+      setUser(null);
     }
-    return null;
-  });
+  }, []);
 
-  const setUserAndSave = (newUser: User | null) => {
-    setUser(newUser);
-    if (newUser) {
-      localStorage.setItem('user_info', JSON.stringify(newUser));
-    } else {
-      localStorage.removeItem('user_info');
-      localStorage.removeItem('user_token');
-    }
-  };
+  useEffect(() => { refreshUser(); }, [refreshUser]);
 
-  const logout = () => {
-    setUserAndSave(null);
+  const logout = async () => {
+    try { await fetch('/api/user/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
+    setUser(null);
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser: setUserAndSave, logout }}>
+    <UserContext.Provider value={{ user, setUser, logout, refreshUser }}>
       {children}
     </UserContext.Provider>
   );
