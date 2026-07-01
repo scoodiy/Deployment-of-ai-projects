@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import CurtainReveal from '../../components/CurtainReveal';
 
 const DIRECT_ENTRY_MESSAGE = 'animated-login-enter';
 
 function markDirectEntry() {
   try {
     sessionStorage.setItem('animated-login-entered', '1');
-    sessionStorage.setItem('curtain-played', '1');
   } catch {
     // Session storage can be unavailable in hardened browser modes.
   }
@@ -31,13 +31,14 @@ export default function LoginPageClient() {
   }, [router]);
 
   return (
-    <main className="min-h-dvh w-screen overflow-hidden bg-white">
+    <main className="min-h-dvh w-screen overflow-hidden bg-white relative">
       <iframe
         src="/animated-login/index.html"
         title="Animated characters login page"
         aria-label="Animated characters login page"
         className="block h-dvh w-screen border-0"
       />
+      <CurtainReveal oncePerSession />
     </main>
   );
 }
