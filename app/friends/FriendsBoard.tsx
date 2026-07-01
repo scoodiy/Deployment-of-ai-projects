@@ -7,6 +7,7 @@ import SiteComments from '../../components/SiteComments';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import { siteConfig } from '../../siteConfig';
+import { useToast } from '../../components/ToastProvider';
 
 interface Friend {
   id: number;
@@ -36,6 +37,7 @@ export default function FriendsBoard() {
   const [friendsData, setFriendsData] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { showToast } = useToast();
 
   const applyFormat = siteConfig.friendLinkApplyFormat;
 
@@ -58,9 +60,13 @@ export default function FriendsBoard() {
   }, []);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(applyFormat);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    try {
+      navigator.clipboard.writeText(applyFormat);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      showToast("复制失败，请手动复制", "error");
+    }
   };
 
   return (

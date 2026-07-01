@@ -84,7 +84,8 @@ function initTables(db: Database.Database) {
       config_key TEXT UNIQUE NOT NULL,
       config_value TEXT DEFAULT '',
       description TEXT DEFAULT '',
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      version INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS operation_logs (
@@ -183,14 +184,23 @@ function initTables(db: Database.Database) {
   // 先检查旧表是否存在且缺少新字段，做迁移
   const commentsTableInfo = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='comments'").get() as Record<string, unknown> | undefined;
   if (commentsTableInfo) {
-    // 旧表存在，检查是否有 parent_id 和 updated_at 列
     const cols = db.prepare("PRAGMA table_info(comments)").all() as Record<string, unknown>[];
     const colNames = cols.map((c: Record<string, unknown>) => c.name as string);
     if (!colNames.includes('parent_id')) {
-      // 重建表以扩展 CHECK 约束并添加新列
       db.exec("ALTER TABLE comments RENAME TO comments_old");
       db.exec("CREATE TABLE comments (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, target_type TEXT NOT NULL CHECK(target_type IN ('blog', 'media', 'music', 'friend', 'project')), target_id INTEGER NOT NULL, content TEXT NOT NULL, parent_id INTEGER DEFAULT NULL, status TEXT DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))");
-      db.exec("INSERT INTO comments (id, user_id, target_type, target_id, content, status, created_at, updated_at) SELECT id, user_id, target_type, target_id, content, status, created_at, created_at FROM comments_old");
+      // 动态检查旧表列，避免列数不匹配导致数据丢失
+      const oldCols = db.prepare("PRAGMA table_info(comments_old)").all() as Record<string, unknown>[];
+      const oldColNames = oldCols.map((c: Record<string, unknown>) => c.name as string);
+      const hasUpdatedAt = oldColNames.includes('updated_at');
+      const hasParentId = oldColNames.includes('parent_id');
+      const hasStatus = oldColNames.includes('status');
+      const colList: string[] = ['id', 'user_id', 'target_type', 'target_id', 'content'];
+      if (hasStatus) colList.push('status');
+      colList.push('created_at');
+      if (hasUpdatedAt) colList.push('updated_at'); else colList.push('created_at AS updated_at');
+      if (hasParentId) colList.push('parent_id');
+      db.exec(`INSERT INTO comments (${colList.join(', ')}) SELECT ${colList.join(', ')} FROM comments_old`);
       db.exec("DROP TABLE comments_old");
     }
   } else {

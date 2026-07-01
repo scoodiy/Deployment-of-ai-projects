@@ -21,21 +21,32 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetch(`/api/user/${id}`)
+  const fetchProfile = () => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    fetch(`/api/user/${id}`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('User not found');
         return res.json();
       })
       .then(data => setProfile(data.user))
-      .catch(() => setError('用户不存在或已注销'))
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setError('用户不存在或已注销');
+      })
       .finally(() => setLoading(false));
+    return () => controller.abort();
+  };
+
+  useEffect(() => {
+    return fetchProfile();
   }, [id]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
-        <div className="text-white/60">加载中...</div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-400"></div>
       </div>
     );
   }
@@ -45,6 +56,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error || '用户不存在'}</p>
+          <button onClick={fetchProfile} className="text-indigo-400 hover:text-indigo-300 text-sm mr-4">重试</button>
           <Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm">← 返回首页</Link>
         </div>
       </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../../../components/admin/Toast';
+import ConfirmDialog, { InputDialog } from '../../../../components/admin/ConfirmDialog';
 
 interface User {
   id: number;
@@ -25,12 +27,19 @@ interface User {
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  
+  const [message, setMessage] = useState({ type: '', text: '' });
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ nickname: '', bio: '', signature: '', admin_remark: '', ai_daily_limit: 10 });
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [banLoading, setBanLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<() => void>(null!);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [inputOpen, setInputOpen] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/users/${id}`)
@@ -76,48 +85,65 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleBan = async () => {
-    const reason = prompt('请输入封禁原因：');
-    if (reason === null) return;
+  const handleBan = () => {
+    setInputOpen(true);
+  };
 
-    const res = await fetch(`/api/admin/users/${id}/ban`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
-    });
-    const data = await res.json();
-    if (res.ok) {
+  const handleBanConfirm = async (reason: string) => {
+    setInputOpen(false);
+    setBanLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `操作失败 (${res.status})`);
+      }
       window.location.reload();
-    } else {
-      alert(data.error || '封禁失败');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "操作失败", "error");
+    } finally {
+      setBanLoading(false);
     }
   };
 
   const handleUnban = async () => {
-    if (!confirm('确定解封？')) return;
-
-    const res = await fetch(`/api/admin/users/${id}/unban`, { method: 'PUT' });
-    const data = await res.json();
-    if (res.ok) {
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/unban`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `操作失败 (${res.status})`);
+      }
       window.location.reload();
-    } else {
-      alert(data.error || '解封失败');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "操作失败", "error");
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
-    if (!confirm('确定重置密码？')) return;
-
-    const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: 'PUT' });
-    const data = await res.json();
-    if (res.ok) {
-      if (data.temp_password) {
-        alert(`密码已重置\n临时密码: ${data.temp_password}\n请妥善保管`);
-      } else {
-        alert('密码已重置');
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `操作失败 (${res.status})`);
       }
-    } else {
-      alert(data.error || '重置失败');
+      const data = await res.json();
+      if (data.temp_password) {
+        toast(`密码已重置\n临时密码: ${data.temp_password}\n请妥善保管`, 'success');
+      } else {
+        toast('密码已重置', 'success');
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "操作失败", "error");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -163,15 +189,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
               </button>
             )}
             {user.status === 'active' ? (
-              <button onClick={handleBan} className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30">
+              <button onClick={handleBan} disabled={banLoading} className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 disabled:opacity-50">
                 🚫 封禁
               </button>
             ) : (
-              <button onClick={handleUnban} className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30">
+              <button onClick={handleUnban} disabled={actionLoading} className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 disabled:opacity-50">
                 ✅ 解封
               </button>
             )}
-            <button onClick={handleResetPassword} className="px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30">
+            <button onClick={handleResetPassword} disabled={actionLoading} className="px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30 disabled:opacity-50">
               🔑 重置密码
             </button>
           </div>
@@ -290,6 +316,29 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="确认操作"
+        message={confirmMessage}
+        danger
+        confirmText="确认"
+        cancelText="取消"
+        onConfirm={() => { setConfirmOpen(false); pendingAction?.(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <InputDialog
+        open={inputOpen}
+        title="封禁用户"
+        message="请输入封禁原因："
+        placeholder="封禁原因"
+        confirmText="确认"
+        cancelText="取消"
+        danger
+        onConfirm={handleBanConfirm}
+        onCancel={() => setInputOpen(false)}
+      />
     </div>
   );
 }

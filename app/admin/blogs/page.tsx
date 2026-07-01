@@ -7,6 +7,7 @@ import ErrorState from "../../../components/ErrorState";
 import EmptyState from "../../../components/EmptyState";
 import ConfirmDialog from "../../../components/admin/ConfirmDialog";
 import Pagination from "../../../components/admin/Pagination";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader, AdminToolbar, StatusBadge } from "../../../components/admin/AdminUI";
 
 interface Blog {
@@ -28,6 +29,7 @@ function getBlogStatus(blog: Blog) {
 
 export default function BlogsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -36,6 +38,7 @@ export default function BlogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; title: string } | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const loadBlogs = useCallback(async () => {
     setLoading(true);
@@ -73,12 +76,16 @@ export default function BlogsPage() {
       setConfirmDelete(null);
       loadBlogs();
     } catch (_e) {
-      alert("删除失败，请重试");
+      toast("删除失败，请重试", "error");
     }
   };
 
   const handleToggleStatus = async (blog: Blog) => {
+    if (togglingId) return;
     const newStatus = blog.status === "published" ? "draft" : "published";
+    const confirmed = window.confirm(`确认将文章「${blog.title}」设为${newStatus === "published" ? "已发布" : "草稿"}状态？`);
+    if (!confirmed) return;
+    setTogglingId(String(blog.id));
     try {
       const res = await fetch(`/api/admin/blogs/${blog.id}`, {
         method: "PUT",
@@ -88,7 +95,9 @@ export default function BlogsPage() {
       if (!res.ok) throw new Error("更新失败");
       loadBlogs();
     } catch (_e) {
-      alert("状态更新失败，请重试");
+      toast("状态更新失败，请重试", "error");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -168,7 +177,7 @@ export default function BlogsPage() {
                       <tr key={blog.id} className="hover:bg-slate-50">
                         <td className="px-5 py-3 font-medium text-slate-950">{blog.title}</td>
                         <td className="px-5 py-3">
-                          <button type="button" onClick={() => handleToggleStatus(blog)}>
+                          <button type="button" onClick={() => handleToggleStatus(blog)} disabled={togglingId === String(blog.id)}>
                             <StatusBadge tone={statusView.tone}>{statusView.label}</StatusBadge>
                           </button>
                         </td>

@@ -16,33 +16,38 @@ interface Project {
 }
 
 export default function ProjectsBoard() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const fetchProjects = () => {
+  const loadProjects = () => {
+    let cancelled = false;
     setLoading(true);
     setError(false);
     fetch('/api/projects')
       .then(res => res.json())
-      .then(data => { setProjectsData(data.projects || []); setLoading(false); })
-      .catch(() => { setError(true); setLoading(false); });
+      .then(data => { if (!cancelled) { setProjectsData(data.projects || []); } })
+      .catch(() => { if (!cancelled) { setError(true); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   };
 
   useEffect(() => {
-    let cancelled = false;
-    fetch('/api/projects')
-      .then(res => res.json())
-      .then(data => { if (!cancelled) { setProjectsData(data.projects || []); setLoading(false); } })
-      .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
-    return () => { cancelled = true; };
+    return loadProjects();
   }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // 搜索过滤逻辑
   const filteredProjects = useMemo(() => {
-    if (searchQuery.trim() === "") return projectsData;
-    const query = searchQuery.trim().toLowerCase();
+    if (debouncedSearch.trim() === "") return projectsData;
+    const query = debouncedSearch.trim().toLowerCase();
 
     return projectsData.filter(project => {
       let tags: string[] = [];
@@ -53,7 +58,7 @@ export default function ProjectsBoard() {
         tags.some(tag => tag.toLowerCase().includes(query))
       );
     });
-  }, [searchQuery, projectsData]);
+  }, [debouncedSearch, projectsData]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-10 py-10 relative z-10">
@@ -79,8 +84,8 @@ export default function ProjectsBoard() {
           <input
             type="text"
             placeholder="搜索项目名称、描述或技术栈..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="w-full bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-full px-6 py-3 pl-12 text-slate-800 dark:text-white shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder-slate-500 font-serif"
           />
           <svg className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,7 +98,7 @@ export default function ProjectsBoard() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState onRetry={fetchProjects} />
+        <ErrorState onRetry={loadProjects} />
       ) : (
       <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 relative">
         <AnimatePresence>
@@ -155,7 +160,7 @@ export default function ProjectsBoard() {
             animate={{ opacity: 1 }}
             className="col-span-full text-center py-20 text-slate-500 font-serif w-full"
           >
-            云端尚未建立代号为 [{searchQuery}] 的档案...
+            云端尚未建立代号为 [{debouncedSearch}] 的档案...
           </motion.div>
         )}
       </motion.div>

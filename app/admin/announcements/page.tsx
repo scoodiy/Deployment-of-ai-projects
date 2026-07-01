@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ActionButton, AdminCard, AdminPageHeader, StatusBadge } from '../../../components/admin/AdminUI';
+import ConfirmDialog from '../../../components/admin/ConfirmDialog';
+import { useToast } from '../../../components/admin/Toast';
 
 interface Announcement {
   id: number;
@@ -55,34 +57,54 @@ export default function AnnouncementsAdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [editId, setEditId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<() => void>(null!);
+  const [pendingTitle, setPendingTitle] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const loadAnnouncements = useCallback(async () => {
-    const res = await fetch('/api/admin/announcements');
-    const data = await res.json();
-    setAnnouncements(data.announcements || []);
+    try {
+      const res = await fetch('/api/admin/announcements');
+      if (!res.ok) throw new Error('加载失败');
+      const data = await res.json();
+      setAnnouncements(data.announcements || []);
+    } catch (err) {
+      console.error('loadAnnouncements error:', err);
+    }
   }, []);
 
   useEffect(() => { loadAnnouncements(); }, [loadAnnouncements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = editId ? `/api/admin/announcements/${editId}` : '/api/admin/announcements';
-    const method = editId ? 'PUT' : 'POST';
-
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        publish_at: form.publish_at || null,
-        end_at: form.end_at || null,
-      }),
-    });
-
-    setShowForm(false);
-    setEditId(null);
-    setForm(defaultForm);
-    loadAnnouncements();
+    setLoading(true);
+    try {
+      const url = editId ? `/api/admin/announcements/${editId}` : '/api/admin/announcements';
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          publish_at: form.publish_at || null,
+          end_at: form.end_at || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `操作失败 (${res.status})`);
+      }
+      setShowForm(false);
+      setEditId(null);
+      setForm(defaultForm);
+      loadAnnouncements();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "操作失败", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (a: Announcement) => {
@@ -101,10 +123,28 @@ export default function AnnouncementsAdminPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number, title: string) => {
-    if (!confirm(`确定删除公告「${title}」？`)) return;
-    await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
-    loadAnnouncements();
+  const handleDelete = (id: number, title: string) => {
+    setPendingTitle(title);
+    setPendingDelete(id);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/announcements/${pendingDelete}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `删除失败 (${res.status})`);
+      }
+      loadAnnouncements();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "删除失败", "error");
+    } finally {
+      setLoading(false);
+      setPendingDelete(null);
+    }
   };
 
   return (
@@ -176,10 +216,10 @@ export default function AnnouncementsAdminPage() {
               </label>
             </div>
             <div className="flex gap-2">
-              <ActionButton tone="info" type="submit">
+              <ActionButton tone="info" type="submit" disabled={loading}>
                 {editId ? '更新' : '添加'}
               </ActionButton>
-              <ActionButton tone="muted" onClick={() => setShowForm(false)}>
+              <ActionButton tone="muted" onClick={() => setShowForm(false)} disabled={loading}>
                 取消
               </ActionButton>
             </div>
@@ -223,8 +263,8 @@ export default function AnnouncementsAdminPage() {
                     <td className="px-5 py-3 text-slate-500">{a.created_at?.slice(0, 16)}</td>
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
-                        <ActionButton tone="info" onClick={() => handleEdit(a)}>编辑</ActionButton>
-                        <ActionButton tone="danger" onClick={() => handleDelete(a.id, a.title)}>删除</ActionButton>
+                        <ActionButton tone="info" onClick={() => handleEdit(a)} disabled={loading}>编辑</ActionButton>
+                        <ActionButton tone="danger" onClick={() => handleDelete(a.id, a.title)} disabled={pendingDelete === a.id}>删除</ActionButton>
                       </div>
                     </td>
                   </tr>
@@ -234,6 +274,17 @@ export default function AnnouncementsAdminPage() {
           </table>
         </div>
       </AdminCard>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="确认删除"
+        message={`确定删除公告「${pendingTitle}」？`}
+        danger
+        confirmText="确认"
+        cancelText="取消"
+        onConfirm={() => { setConfirmOpen(false); confirmDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

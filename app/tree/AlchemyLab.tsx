@@ -140,7 +140,7 @@ const HexBadge = ({ badge, locked = false }: HexBadgeProps) => {
 const MagicTooltip = ({ title, type, content, author, color }: MagicTooltipProps) => (
   <motion.div
     initial={{ opacity: 0, y: -10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -5, scale: 0.9 }}
-    className="absolute top-[120%] left-1/2 -translate-x-1/2 min-w-[200px] max-w-[280px] w-max z-[100] pointer-events-none"
+    className="absolute top-[120%] left-1/2 -translate-x-1/2 min-w-[200px] max-w-[280px] w-max z-[100] pointer-events-auto"
   >
     <div className="relative p-4 bg-[#231a16]/95 backdrop-blur-md border border-[#8b6b4a]/60 shadow-[0_10px_30px_rgba(0,0,0,0.8)] rounded-md flex flex-col items-center">
       <div className="absolute bottom-0 w-3/4 h-[1px]" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
@@ -264,6 +264,7 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
 
   // 控制图鉴面板的开关
   const [showCatalog, setShowCatalog] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   // =========================================================
   // 🌟 终极 RPG 经验结算与全图鉴徽章生成系统 (兼容照片与友链)
@@ -593,7 +594,7 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
               <h3 className="text-[#d4af37] font-black tracking-widest text-sm uppercase flex items-center gap-2">
                 <Shield size={18} /> 荣誉陈列室
               </h3>
-              <button onClick={() => setShowCatalog(true)} className="flex items-center gap-1.5 text-[10px] font-black text-[#e8e4d9] bg-[#d4af37]/20 hover:bg-[#d4af37]/40 px-3 py-1.5 rounded-lg border border-[#d4af37]/50 transition-colors">
+              <button onClick={() => { setCatalogLoading(true); setShowCatalog(true); setTimeout(() => setCatalogLoading(false), 100); }} className="flex items-center gap-1.5 text-[10px] font-black text-[#e8e4d9] bg-[#d4af37]/20 hover:bg-[#d4af37]/40 px-3 py-1.5 rounded-lg border border-[#d4af37]/50 transition-colors">
                 <Grid size={12} /> 展开全图鉴
               </button>
             </div>
@@ -623,7 +624,12 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-6 custom-scrollbar pb-32">
-
+                    {catalogLoading ? (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#d4af37]"></div>
+                      </div>
+                    ) : (
+                    <>
                     <div className="flex items-center gap-4 mb-8">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#8b6b4a]/50 to-transparent" />
                       <span className="text-[#8b6b4a] text-xs font-black tracking-widest uppercase flex items-center gap-2"><Award size={14} /> 资质等级徽章 (满级 Lv.50)</span>
@@ -691,7 +697,8 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
                         <HexBadge key={b.id} badge={b} locked={!rpgStats.ownedIds.has(b.id)} />
                       ))}
                     </div>
-
+                    </>
+                    )}
                   </div>
                 </motion.div>
               </div>

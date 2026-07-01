@@ -102,7 +102,7 @@ export default function SettingsPage() {
           )}
 
           <ActionButton tone="info" type="submit" disabled={saving}>
-            {saving ? "修改中..." : "修改密码"}
+            {saving ? "保存中..." : "保存配置"}
           </ActionButton>
         </form>
       </AdminCard>

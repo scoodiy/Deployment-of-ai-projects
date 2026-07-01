@@ -317,12 +317,23 @@ const DijiangParticleModel = () => {
   useEffect(() => {
     let isMounted = true;
 
+    const fetchWithRetry = async (url: string, maxRetries = 3) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) return res;
+          console.warn(`Fetch attempt ${i+1} failed with status ${res.status}`);
+        } catch (e) {
+          console.warn(`Fetch attempt ${i+1} failed`, e);
+        }
+        if (i < maxRetries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
+      throw new Error(`Failed to fetch ${url} after ${maxRetries} retries`);
+    };
+
     // 如果你改了 bin 文件的名字，请在这里修改请求路径，例如： fetch('/12345.bin')
-    fetch('/spaceship.bin')
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch spaceship.bin");
-        return res.arrayBuffer();
-      })
+    fetchWithRetry('/spaceship.bin')
+      .then(res => res.arrayBuffer())
       .then(buffer => {
         if (!isMounted) return;
 
@@ -405,6 +416,7 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
   const [mounted, setMounted] = useState(false);
   const [sysTip, setSysTip] = useState<string | null>(null);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -698,7 +710,7 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
                 <Cpu size={18} className="text-[#eab308]" /> CERTIFICATE GALLERY
               </h3>
               <button
-                onClick={() => setShowCatalog(true)}
+                onClick={() => { setCatalogLoading(true); setShowCatalog(true); setTimeout(() => setCatalogLoading(false), 100); }}
                 className="flex items-center gap-1.5 text-[10px] font-black text-slate-200 bg-[#333]/50 hover:bg-[#eab308]/20 hover:text-[#eab308] hover:border-[#eab308] px-3 py-1.5 border border-[#444] transition-colors uppercase tracking-widest"
               >
                 <Grid size={12} /> ALL RECORDS
@@ -737,6 +749,12 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
 
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar pb-32">
 
+                {catalogLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#eab308]"></div>
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-px bg-[#eab308]" />
                   <span className="text-slate-300 text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2"><Shield size={14} className="text-[#eab308]"/> 权限认证 (AUTH LEVEL)</span>
@@ -802,7 +820,8 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
                     <OperatorToken key={b.id} badge={b} locked={!rpgStats.ownedIds.has(b.id)} />
                   ))}
                 </div>
-
+                </>
+                )}
               </div>
             </motion.div>
           </div>
@@ -843,22 +862,22 @@ export default function DijiangModel({ posts = [], chatters = [], moments = [] }
 
           <div className="text-[10px] text-slate-500 font-black tracking-[0.2em] uppercase mb-1 mt-2">SYSTEM OVERRIDE</div>
 
-          <button onClick={() => handleCategoryClick('post', countPost)} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'post' ? 'bg-[#0ea5e9] border-[#0ea5e9] text-white' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'}`}>
+          <button onClick={() => handleCategoryClick('post', countPost)} disabled={countPost === 0} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'post' ? 'bg-[#0ea5e9] border-[#0ea5e9] text-white' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'} ${countPost === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
             <div className={`p-2 ${activeCategory === 'post' ? 'bg-white/20' : 'bg-[#111] border border-[#333] text-[#0ea5e9]'}`}><FileText size={16} /></div>
             <div className="text-left flex-1"><div className="text-sm font-bold tracking-wider">PRTS_DB</div><div className={`text-[9px] font-mono ${activeCategory === 'post' ? 'text-white/80' : 'text-slate-500'}`}>情报卷宗</div></div>
           </button>
 
-          <button onClick={() => handleCategoryClick('chatter', countChatter)} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'chatter' ? 'bg-[#eab308] border-[#eab308] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'}`}>
+          <button onClick={() => handleCategoryClick('chatter', countChatter)} disabled={countChatter === 0} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'chatter' ? 'bg-[#eab308] border-[#eab308] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'} ${countChatter === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
             <div className={`p-2 ${activeCategory === 'chatter' ? 'bg-black/20' : 'bg-[#111] border border-[#333] text-[#eab308]'}`}><MessageCircle size={16} /></div>
             <div className="text-left flex-1"><div className="text-sm font-bold tracking-wider">LOGS</div><div className={`text-[9px] font-mono ${activeCategory === 'chatter' ? 'text-black/60' : 'text-slate-500'}`}>终端通讯</div></div>
           </button>
 
-          <button onClick={() => handleCategoryClick('moment', countMoment)} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'moment' ? 'bg-[#10b981] border-[#10b981] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'}`}>
+          <button onClick={() => handleCategoryClick('moment', countMoment)} disabled={countMoment === 0} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'moment' ? 'bg-[#10b981] border-[#10b981] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'} ${countMoment === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
             <div className={`p-2 ${activeCategory === 'moment' ? 'bg-black/20' : 'bg-[#111] border border-[#333] text-[#10b981]'}`}><Lightbulb size={16} /></div>
             <div className="text-left flex-1"><div className="text-sm font-bold tracking-wider">BEACON</div><div className={`text-[9px] font-mono ${activeCategory === 'moment' ? 'text-black/60' : 'text-slate-500'}`}>观测信标</div></div>
           </button>
 
-          <button onClick={() => handleCategoryClick('message', countMessage)} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'message' ? 'bg-[#f1f5f9] border-[#f1f5f9] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'}`}>
+          <button onClick={() => handleCategoryClick('message', countMessage)} disabled={countMessage === 0} className={`flex items-center gap-4 w-60 p-2 border transition-all duration-300 backdrop-blur-md shadow-sm ${activeCategory === 'message' ? 'bg-[#f1f5f9] border-[#f1f5f9] text-[#111]' : 'bg-[#1e1e1e]/80 border-[#333] hover:bg-[#2a2a2a] text-slate-300'} ${countMessage === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
             <div className={`p-2 ${activeCategory === 'message' ? 'bg-black/20' : 'bg-[#111] border border-[#333] text-[#f1f5f9]'}`}><ShieldAlert size={16} /></div>
             <div className="text-left flex-1"><div className="text-sm font-bold tracking-wider">RECEPTION</div><div className={`text-[9px] font-mono ${activeCategory === 'message' ? 'text-black/60' : 'text-slate-500'}`}>访客申请</div></div>
           </button>

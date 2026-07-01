@@ -5,6 +5,7 @@ import LoadingState from "../../../components/LoadingState";
 import ErrorState from "../../../components/ErrorState";
 import EmptyState from "../../../components/EmptyState";
 import ConfirmDialog from "../../../components/admin/ConfirmDialog";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader, StatusBadge } from "../../../components/admin/AdminUI";
 
 interface Music {
@@ -20,6 +21,7 @@ interface Music {
 
 export default function MusicPage() {
   const [music, setMusic] = useState<Music[]>([]);
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -27,6 +29,7 @@ export default function MusicPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; title: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadMusic = useCallback(async () => {
     setLoading(true);
@@ -70,7 +73,7 @@ export default function MusicPage() {
       setForm({ title: "", artist: "", url: "", cover_image: "", is_background: false, is_enabled: true });
       loadMusic();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "操作失败");
+      toast(e instanceof Error ? e.message : "操作失败", "error");
     } finally {
       setSubmitting(false);
     }
@@ -90,14 +93,17 @@ export default function MusicPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || deletingId) return;
+    setDeletingId(String(confirmDelete.id));
     try {
       const res = await fetch(`/api/admin/music/${confirmDelete.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("删除失败");
       setConfirmDelete(null);
       loadMusic();
     } catch (_e) {
-      alert("删除失败，请重试");
+      toast("删除失败，请重试", "error");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -178,7 +184,7 @@ export default function MusicPage() {
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         <ActionButton tone="info" onClick={() => handleEdit(m)}>编辑</ActionButton>
-                        <ActionButton tone="danger" onClick={() => setConfirmDelete({ id: m.id, title: m.title })}>删除</ActionButton>
+                        <ActionButton tone="danger" onClick={() => setConfirmDelete({ id: m.id, title: m.title })} disabled={deletingId === String(m.id)}>删除</ActionButton>
                       </div>
                     </td>
                   </tr>

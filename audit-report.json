@@ -1,0 +1,215 @@
+{
+  "tools": {
+    "weather": {
+      "route_exists": true,
+      "api_route": "/api/weather",
+      "api_works": true,
+      "button_logic": "点击天气工具卡片展开工具面板，输入城市名或点击定位按钮，调用 /api/weather 获取实时天气数据，支持坐标查询和城市名查询，有模拟模式兜底",
+      "issues": []
+    },
+    "map": {
+      "route_exists": true,
+      "api_route": "/api/map",
+      "api_works": true,
+      "button_logic": "点击地图工具卡片展开，输入地点后点击搜索，调用 /api/map 查询，支持高德地图（有AMAP_KEY时）和Nominatim备选",
+      "issues": ["地图功能依赖 AMAP_KEY 环境变量，未配置时仅能使用 Nominatim（可能受限）"]
+    },
+    "stock": {
+      "route_exists": true,
+      "api_route": "/api/stock",
+      "api_works": true,
+      "button_logic": "点击股票工具卡片展开，支持搜索/问财两种模式，输入股票名或代码后调用 /api/stock 查询行情，支持搜索、行情、K线等操作",
+      "issues": []
+    },
+    "hotlist": {
+      "route_exists": true,
+      "api_route": "/api/hotlist",
+      "api_works": true,
+      "button_logic": "点击热榜工具卡片展开，自动加载微博热搜和B站热搜，支持按来源筛选和刷新，点击条目跳转外部链接",
+      "issues": []
+    },
+    "ip": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击IP查询工具卡片展开，页面加载时自动获取本机IP，点击可查询归属地；也支持手动输入IP查询，调用 https://ipapi.co/ API（纯前端直连）",
+      "issues": []
+    },
+    "translate": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击翻译工具卡片展开，输入文本后点击翻译按钮，调用 https://api.mymemory.translated.net/ 直连翻译（中英日韩法），纯前端实现",
+      "issues": []
+    },
+    "camera-ocr": {
+      "route_exists": true,
+      "api_route": "/api/camera-ocr",
+      "api_works": true,
+      "button_logic": "工具箱中以独立链接存在，点击跳转到 /tools/camera-ocr 页面，支持拍照或上传图片，框选区域后调用 /api/camera-ocr 进行OCR识别和翻译",
+      "issues": ["依赖 ALIYUN_OCR_APPCODE 和 DEEPSEEK_API_KEY 两个付费API Key，未配置则无法使用"]
+    },
+    "calc": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击计算器工具卡片展开，纯客户端计算器，支持基本四则运算和括号，使用 new Function 执行计算",
+      "issues": []
+    },
+    "json": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击JSON工具卡片展开，输入JSON文本后点击格式化或压缩，纯客户端处理",
+      "issues": []
+    },
+    "qrcode": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击二维码工具卡片展开，输入文本或链接后点击生成，调用 https://api.qrserver.com/v1/create-qr-code/ 生成二维码，支持下载",
+      "issues": []
+    },
+    "pomodoro": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击番茄钟工具卡片展开，25分钟专注+5分钟休息循环，纯客户端计时器",
+      "issues": []
+    },
+    "2048": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击2048工具卡片展开，经典2048数字合并游戏，纯客户端实现",
+      "issues": []
+    },
+    "snake": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击贪吃蛇工具卡片展开，经典贪吃蛇游戏，纯客户端实现",
+      "issues": []
+    },
+    "minesweeper": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击扫雷工具卡片展开，经典扫雷游戏（9×9十颗雷），纯客户端实现",
+      "issues": []
+    },
+    "sudoku": {
+      "route_exists": true,
+      "api_route": null,
+      "api_works": true,
+      "button_logic": "点击数独工具卡片展开，逻辑数独游戏，纯客户端实现",
+      "issues": []
+    }
+  },
+  "buttons": {
+    "/tools": {
+      "buttons": [
+        {"id": "category-filter-buttons", "logic": "分类筛选按钮（全部/查询/工具/效率/游戏），点击切换分类并收起当前展开工具", "works": true, "issue": null},
+        {"id": "tool-card-buttons", "logic": "点击工具卡片展开/收起对应工具（camera-ocr除外，该为链接跳转）", "works": true, "issue": null},
+        {"id": "collapse-button", "logic": "展开工具区域内右上角收起按钮，点击收起工具", "works": true, "issue": null}
+      ]
+    },
+    "/tools/camera-ocr": {
+      "buttons": [
+        {"id": "open-camera", "logic": "打开摄像头按钮", "works": true, "issue": null},
+        {"id": "take-photo", "logic": "拍照按钮", "works": true, "issue": null},
+        {"id": "upload-image", "logic": "上传图片按钮", "works": true, "issue": null},
+        {"id": "recognize-btn", "logic": "识别按钮，POST /api/camera-ocr", "works": true, "issue": null},
+        {"id": "copy-text", "logic": "复制识别结果和翻译结果", "works": true, "issue": null}
+      ]
+    },
+    "/login": {
+      "buttons": [
+        {"id": "tab-login", "logic": "登录标签切换", "works": true, "issue": null},
+        {"id": "tab-register", "logic": "注册标签切换", "works": true, "issue": null},
+        {"id": "send-code", "logic": "发送邮箱验证码按钮，POST /api/user/send-code", "works": true, "issue": null},
+        {"id": "submit-btn", "logic": "提交按钮，根据模式调用 /api/user/login 或 /api/user/register", "works": true, "issue": null},
+        {"id": "forgot-password", "logic": "忘记密码按钮，切换到重置模式", "works": true, "issue": null},
+        {"id": "admin-login-link", "logic": "管理员入口按钮，跳转 /admin", "works": true, "issue": null}
+      ]
+    },
+    "/admin/login": {
+      "buttons": [
+        {"id": "submit-btn", "logic": "登录按钮，POST /api/admin/login，成功后跳转 /admin/dashboard", "works": true, "issue": null}
+      ]
+    },
+    "/admin/settings": {
+      "buttons": [
+        {"id": "change-password-btn", "logic": "修改密码按钮，PUT /api/admin/password", "works": true, "issue": null}
+      ]
+    },
+    "/admin/blogs": {
+      "buttons": [
+        {"id": "create-btn", "logic": "创建文章按钮，跳转 /admin/blogs/create", "works": true, "issue": null},
+        {"id": "edit-btn", "logic": "编辑文章按钮，跳转 /admin/blogs/edit/[id]", "works": true, "issue": null}
+      ]
+    },
+    "/admin/users": {
+      "buttons": [
+        {"id": "user-action-buttons", "logic": "用户管理操作按钮（查看/封禁/角色调整等），各调用对应API", "works": true, "issue": null}
+      ]
+    },
+    "/photowall": {
+      "buttons": [
+        {"id": "photo-navigation", "logic": "照片墙导航按钮，点击查看大图和切换", "works": true, "issue": null}
+      ]
+    },
+    "/tree": {
+      "buttons": [
+        {"id": "tree-nav-buttons", "logic": "树洞页各工具入口按钮", "works": true, "issue": null}
+      ]
+    },
+    "/music": {
+      "buttons": [
+        {"id": "player-controls", "logic": "音乐播放器控制按钮（播放/暂停/上一首/下一首等）", "works": true, "issue": null}
+      ]
+    },
+    "/": {
+      "buttons": [
+        {"id": "search-bar", "logic": "首页搜索框，搜索文章", "works": true, "issue": null},
+        {"id": "photowall-links", "logic": "照片墙入口链接（两个），跳转 /photowall", "works": true, "issue": null},
+        {"id": "latest-posts-carousel", "logic": "最新文章轮播，点击跳转文章详情页", "works": true, "issue": null},
+        {"id": "latest-chatters-carousel", "logic": "最新碎片记录轮播，点击跳转详情", "works": true, "issue": null}
+      ]
+    }
+  },
+  "database": {
+    "connection_works": true,
+    "tables": [
+      "admins",
+      "ai_usage_logs",
+      "announcements",
+      "blogs",
+      "comments",
+      "favorites",
+      "friends",
+      "likes",
+      "login_logs",
+      "media_files",
+      "music",
+      "operation_logs",
+      "projects",
+      "site_config",
+      "user_admin_notes",
+      "user_ai_quota",
+      "user_risk_flags",
+      "user_tag_relations",
+      "user_tags",
+      "users",
+      "verification_codes",
+      "admin_operation_logs"
+    ],
+    "issues": [
+      "comments 表在 initTables 中通过 ALTER TABLE + RENAME 模式重建时存在潜在数据丢失风险：如果 comments_old 表缺少 updated_at 列，INSERT INTO comments SELECT ... updated_at 会因列数不匹配而失败（实际查询显示 updated_at 已存在，可能是之前迁移过）",
+      "ai_usage_logs 表的 FK 指向 users(id)，但 users 表中未见 ai_daily_limit 实际使用列（代码中有 DEFAULT 10），需确认 users 表完整",
+      "Map API 依赖 AMAP_KEY 环境变量，未配置时降级到 Nominatim（可能受限或限流）",
+      "Camera-OCR 依赖 ALIYUN_OCR_APPCODE 和 DEEPSEEK_API_KEY，未配置则完全不可用",
+      "site_config 表缺少 version 列的显式 ALTER TABLE 迁移（代码中有 try-catch 但逻辑与其他表不一致）"
+    ]
+  }
+}

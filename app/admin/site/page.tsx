@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader } from "../../../components/admin/AdminUI";
 
 interface Config {
@@ -12,6 +13,7 @@ interface Config {
 
 export default function SiteConfigPage() {
   const [configs, setConfigs] = useState<Config[]>([]);
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -27,14 +29,18 @@ export default function SiteConfigPage() {
     configs.forEach((c) => { configMap[c.config_key] = c.config_value; });
 
     try {
-      await fetch("/api/admin/site-config", {
+      const res = await fetch("/api/admin/site-config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(configMap),
       });
-      alert("保存成功");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `保存失败 (${res.status})`);
+      }
+      toast("保存成功", "success");
     } catch {
-      alert("保存失败");
+      toast("保存失败", "error");
     } finally {
       setSaving(false);
     }
@@ -45,7 +51,7 @@ export default function SiteConfigPage() {
   };
 
   const handleImageUpload = async (key: string, file: File) => {
-    if (file.size > 10 * 1024 * 1024) { alert('文件超过10MB'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast('文件超过10MB', 'error'); return; }
     const fd = new FormData();
     fd.append('file', file);
     try {
@@ -54,9 +60,9 @@ export default function SiteConfigPage() {
       if (res.ok && data.url) {
         updateValue(key, data.url);
       } else {
-        alert(data.error?.message || data.error || '上传失败');
+        toast(data.error?.message || data.error || '上传失败', 'error');
       }
-    } catch { alert('上传失败'); }
+    } catch { toast('上传失败', 'error'); }
   };
 
   const isImageField = (key: string) => /image|avatar|background|bg|logo|cover|icon|photo/i.test(key);

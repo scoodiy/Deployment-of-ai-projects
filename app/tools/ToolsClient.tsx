@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 
+import { useRouter } from 'next/navigation';
 import WeatherTool from '../../components/toolbox/WeatherTool';
 import MapTool from '../../components/toolbox/MapTool';
 import StockTool from '../../components/toolbox/StockTool';
@@ -15,6 +17,7 @@ import QrCodeTool from '../../components/toolbox/QrCodeTool';
 import JsonTool from '../../components/toolbox/JsonTool';
 import IpTool from '../../components/toolbox/IpTool';
 import PomodoroTool from '../../components/toolbox/PomodoroTool';
+import DailyStockTool from '../../components/toolbox/DailyStockTool';
 import Game2048 from '../../components/toolbox/games/Game2048';
 import SnakeGame from '../../components/toolbox/games/SnakeGame';
 import MinesweeperGame from '../../components/toolbox/games/MinesweeperGame';
@@ -24,9 +27,11 @@ const TOOLS = [
   { id: 'weather', name: '天气', desc: '实时天气查询，支持全国城市', icon: '🌤️', cat: '查询', component: <WeatherTool /> },
   { id: 'map', name: '地图', desc: '地点搜索、地图预览、一键导航', icon: '🗺️', cat: '查询', component: <MapTool /> },
   { id: 'stock', name: '股票', desc: '同花顺行情、问财自然语言查询', icon: '📈', cat: '查询', component: <StockTool /> },
+  { id: 'daily-stock', name: '每日行情', desc: '每日市场涨跌停一览', icon: '📊', cat: '查询', component: null },
   { id: 'hotlist', name: '热榜', desc: '多平台热搜聚合，一站速览', icon: '🔥', cat: '查询', component: <HotlistTool /> },
   { id: 'ip', name: 'IP 查询', desc: '查询 IP 归属地、运营商', icon: '🌐', cat: '查询', component: <IpTool /> },
   { id: 'translate', name: '翻译', desc: '多语言互译，中英日韩法', icon: '💬', cat: '工具', component: <TranslateTool /> },
+  { id: 'camera-ocr', name: '拍照识图', desc: '摄像头拍照、框选区域识别文字并翻译', icon: '📸', cat: '工具', component: null },
   { id: 'calc', name: '计算器', desc: '快捷计算，支持基本运算', icon: '🧮', cat: '工具', component: <CalculatorTool /> },
   { id: 'json', name: 'JSON', desc: 'JSON 格式化、压缩、校验', icon: '📋', cat: '工具', component: <JsonTool /> },
   { id: 'qrcode', name: '二维码', desc: '文本、链接生成二维码', icon: '📱', cat: '工具', component: <QrCodeTool /> },
@@ -49,6 +54,7 @@ export default function ToolsClient() {
 
   const [activeId, setActiveId] = useState<string | null>(() => getInitialTool()?.id ?? null);
   const [cat, setCat] = useState(() => getInitialTool()?.cat ?? '全部');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const activeTool = TOOLS.find(t => t.id === activeId);
   const filtered = cat === '全部' ? TOOLS : TOOLS.filter(t => t.cat === cat);
 
@@ -56,10 +62,24 @@ export default function ToolsClient() {
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
     if (!hash) return;
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       document.getElementById(`tool-${hash}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
+    return () => clearTimeout(timer);
   }, []);
+
+  const handleToolClick = (id: string) => {
+    if (isTransitioning) return;
+    if (activeId === id) {
+      setIsTransitioning(true);
+      setActiveId(null);
+      setTimeout(() => setIsTransitioning(false), 300);
+      return;
+    }
+    setIsTransitioning(true);
+    setActiveId(id);
+    setTimeout(() => setIsTransitioning(false), 300);
+  };
 
   return (
     <div className="min-h-screen relative pb-10">
@@ -86,11 +106,23 @@ export default function ToolsClient() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {filtered.map((tool, index) => {
               const isActive = activeId === tool.id;
+              if (tool.id === 'camera-ocr' || tool.id === 'daily-stock') {
+                // 拍照识图和每日行情跳转到独立页面
+                return (
+                  <Link key={tool.id} id={`tool-${tool.id}`} href={`/tools/${tool.id}`}
+                    className="text-left p-4 rounded-2xl border transition-all duration-300 bg-white/50 dark:bg-slate-800/30 backdrop-blur-md border-white/40 dark:border-white/10 shadow-lg hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:scale-[1.02] block">
+                    <span className="text-2xl block mb-2">{tool.icon}</span>
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white">{tool.name}</h3>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{tool.desc}</p>
+                  </Link>
+                );
+              }
               return (
                 <motion.button key={tool.id} id={`tool-${tool.id}`}
                   initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
-                  onClick={() => setActiveId(isActive ? null : tool.id)}
-                  className={`text-left p-4 rounded-2xl border transition-all duration-300 ${
+                  onClick={() => handleToolClick(tool.id)}
+                  disabled={isTransitioning}
+                  className={`text-left p-4 rounded-2xl border transition-all duration-300 disabled:cursor-not-allowed ${
                     isActive
                       ? 'bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-400 dark:border-indigo-500 shadow-lg shadow-indigo-500/10 scale-[1.02]'
                       : 'bg-white/50 dark:bg-slate-800/30 backdrop-blur-md border-white/40 dark:border-white/10 shadow-lg hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:scale-[1.02]'

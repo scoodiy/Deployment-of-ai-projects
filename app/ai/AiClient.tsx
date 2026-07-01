@@ -107,8 +107,9 @@ export default function AiClient() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      onClick={() => sendMessage(q)}
-                      className="text-left text-sm px-4 py-3 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-lg transition-all"
+                      onClick={() => { if (isLoading) return; sendMessage(q); }}
+                      disabled={isLoading}
+                      className="text-left text-sm px-4 py-3 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {q}
                     </motion.button>

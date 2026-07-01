@@ -15,7 +15,6 @@ import GlobalSnow from '../components/GlobalSnow';
 import { UserProvider } from '../components/UserProvider';
 import { ToastProvider } from '../components/ToastProvider';
 import { PublicAnnouncementBanner, PublicOverlays } from '../components/PublicChrome';
-import Script from 'next/script';
 
 // 获取数据库配置，失败时回退到静态配置
 const dbConfig = getSiteConfig();
@@ -78,31 +77,41 @@ const geistMono = localFont({
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased curtain-pending`} suppressHydrationWarning>
       <head>
         <style
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
-              #app-mount-root { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.5s ease, visibility 0.5s ease; }
-              html.splash-seen #app-mount-root { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+              #app-mount-root { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity 0.5s ease, visibility 0.5s ease; }
+              html.curtain-pending #app-mount-root { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+              html.curtain-ready #app-mount-root { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; transition: none !important; }
+              body.camera-ocr-low-power .bg-effects-wrapper { opacity: 0 !important; visibility: hidden !important; }
+              body.camera-ocr-low-power .site-gradient-layer { animation: none !important; opacity: 0.12 !important; }
               /* 确保背景图加载前有稳定底色 */
               body { background-color: #f8fafc; }
               .dark body { background-color: #020617; }
             `
           }}
         />
-
-        <Script id="handle-splash-logic" strategy="beforeInteractive">
-          {`
+        <script
+          id="handle-curtain-logic"
+          dangerouslySetInnerHTML={{
+            __html: `
             try {
-              if (sessionStorage.getItem('hasEnteredSplash') === 'true') {
-                document.documentElement.classList.add('splash-seen');
+              if (sessionStorage.getItem('curtain-played')) {
+                document.documentElement.classList.remove('curtain-pending');
+                document.documentElement.classList.add('curtain-ready');
+              } else {
+                document.documentElement.classList.add('curtain-pending');
               }
-            } catch (e) {}
-          `}
-        </Script>
-
+            } catch (e) {
+              document.documentElement.classList.remove('curtain-pending');
+              document.documentElement.classList.add('curtain-ready');
+            }
+          `
+          }}
+        />
       </head>
 
       <body className="w-screen overflow-x-hidden min-h-full flex flex-col relative transition-colors duration-1000 bg-slate-50 dark:bg-slate-950 font-serif">
@@ -117,7 +126,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                       {!siteConfig.useGradient && <BackgroundSlider />}
                       <div className="absolute inset-0 z-[-9] bg-white/30 dark:bg-slate-900/40 backdrop-blur-md transition-colors duration-1000"></div>
                     <div
-                      className="absolute inset-0 z-[-8] opacity-60 dark:opacity-20 mix-blend-color transition-opacity duration-1000 transform-gpu"
+                      className="site-gradient-layer absolute inset-0 z-[-8] opacity-60 dark:opacity-20 mix-blend-color transition-opacity duration-1000 transform-gpu"
                       style={{
                         background: `linear-gradient(-45deg, ${siteConfig.themeColors.join(', ')})`,
                         backgroundSize: '400% 400%',

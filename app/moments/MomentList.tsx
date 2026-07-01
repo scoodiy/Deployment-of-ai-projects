@@ -31,6 +31,7 @@ function timeAgo(dateStr: string) {
 
 export default function MomentList({ moments, authorName, avatarUrl }: MomentListProps) {
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+  const [expandingCommentId, setExpandingCommentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [lightbox, setLightbox] = useState<{ images: string[], index: number } | null>(null);
@@ -104,6 +105,13 @@ export default function MomentList({ moments, authorName, avatarUrl }: MomentLis
     );
   };
 
+  const handleExpandComments = (commentId: string) => {
+    if (expandingCommentId) return;
+    setOpenCommentId(openCommentId === commentId ? null : commentId);
+    setExpandingCommentId(commentId);
+    setTimeout(() => setExpandingCommentId(null), 300);
+  };
+
   const renderMomentCard = (moment: Moment) => (
     <motion.div
       key={moment.id}
@@ -138,7 +146,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: MomentLis
             </span>
           )}
         </div>
-        <button onClick={() => setOpenCommentId(openCommentId === moment.id ? null : moment.id)} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm ${openCommentId === moment.id ? 'bg-indigo-500 text-white shadow-indigo-500/30 rotate-12' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+        <button onClick={() => handleExpandComments(moment.id)} disabled={expandingCommentId !== null} className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0 rounded-full transition-all shadow-sm disabled:cursor-not-allowed ${openCommentId === moment.id ? 'bg-indigo-500 text-white shadow-indigo-500/30 rotate-12' : 'bg-white/80 dark:bg-slate-800 text-slate-400 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
           <MessageSquare size={14} className="md:w-4 md:h-4" />
         </button>
       </div>

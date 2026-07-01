@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader } from "../../../components/admin/AdminUI";
 
 export default function AboutPage() {
   const [configs, setConfigs] = useState<Record<string, string>>({});
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
   const aboutKeys = ["about_title", "about_content", "avatar_url", "github_url", "gitee_url", "email", "qq", "wechat", "bilibili_url", "custom_links"];
@@ -24,16 +26,29 @@ export default function AboutPage() {
   }, []);
 
   const handleSave = async () => {
+    const customLinksStr = configs.custom_links || "";
+    if (customLinksStr.trim()) {
+      try {
+        JSON.parse(customLinksStr);
+      } catch {
+        toast("自定义链接 JSON 格式错误，请检查", "error");
+        return;
+      }
+    }
     setSaving(true);
     try {
-      await fetch("/api/admin/site-config", {
+      const res = await fetch("/api/admin/site-config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(configs),
       });
-      alert("保存成功");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `保存失败 (${res.status})`);
+      }
+      toast("保存成功", "success");
     } catch {
-      alert("保存失败");
+      toast("保存失败", "error");
     } finally {
       setSaving(false);
     }
@@ -94,15 +109,15 @@ export default function AboutPage() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  if (file.size > 10 * 1024 * 1024) { alert('文件超过10MB'); return; }
+                  if (file.size > 10 * 1024 * 1024) { toast('文件超过10MB', 'error'); return; }
                   const fd = new FormData();
                   fd.append('file', file);
                   try {
                     const res = await fetch('/api/admin/media/upload', { method: 'POST', body: fd });
                     const data = await res.json();
                     if (res.ok && data.url) updateValue("avatar_url", data.url);
-                    else alert(data.error?.message || '上传失败');
-                  } catch { alert('上传失败'); }
+                    else toast(data.error?.message || '上传失败', 'error');
+                  } catch { toast('上传失败', 'error'); }
                   e.target.value = '';
                 }}
               />

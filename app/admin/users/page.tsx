@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { InputDialog } from '../../../components/admin/ConfirmDialog';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../../components/admin/Toast';
 import Pagination from '../../../components/admin/Pagination';
 import { ActionButton, AdminCard, AdminPageHeader, AdminToolbar, StatusBadge } from '../../../components/admin/AdminUI';
+import ConfirmDialog from '../../../components/admin/ConfirmDialog';
 
 interface User {
   id: number;
@@ -26,6 +29,7 @@ interface User {
 
 export default function UsersPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -36,6 +40,11 @@ export default function UsersPage() {
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('DESC');
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<() => void>(null!);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [inputOpen, setInputOpen] = useState(false);
+  const [pendingBanUser, setPendingBanUser] = useState<User | null>(null);
 
   const handleExport = async () => {
     const params = new URLSearchParams();
@@ -57,10 +66,10 @@ export default function UsersPage() {
         window.URL.revokeObjectURL(url);
       } else {
         const data = await res.json();
-        alert(data.error || '导出失败');
+        toast(data.error || '导出失败', 'error');
       }
     } catch {
-      alert('导出失败');
+      toast('导出失败', 'error');
     }
   };
 
@@ -99,10 +108,15 @@ export default function UsersPage() {
     loadUsers();
   };
 
-  const handleBan = async (user: User) => {
-    const reason = prompt(`请输入封禁 ${user.username} 的原因：`);
-    if (reason === null) return;
+  const handleBan = (user: User) => {
+    setPendingBanUser(user);
+    setInputOpen(true);
+  };
 
+  const handleBanConfirm = async (reason: string) => {
+    setInputOpen(false);
+    const user = pendingBanUser;
+    if (!user) return;
     const res = await fetch(`/api/admin/users/${user.id}/ban`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -111,37 +125,42 @@ export default function UsersPage() {
     const data = await res.json();
     if (res.ok) {
       loadUsers();
+      toast('用户已封禁', 'success');
     } else {
-      alert(data.error || '封禁失败');
+      toast(data.error || '封禁失败', 'error');
     }
   };
 
   const handleUnban = async (user: User) => {
-    if (!confirm(`确定解封 ${user.username}？`)) return;
-
-    const res = await fetch(`/api/admin/users/${user.id}/unban`, { method: 'PUT' });
-    const data = await res.json();
-    if (res.ok) {
-      loadUsers();
-    } else {
-      alert(data.error || '解封失败');
-    }
+    setConfirmMessage(`确定解封 ${user.username}？`);
+    setPendingAction(async () => {
+      const res = await fetch(`/api/admin/users/${user.id}/unban`, { method: 'PUT' });
+      const data = await res.json();
+      if (res.ok) {
+        loadUsers();
+      } else {
+        toast(data.error || '解封失败', 'error');
+      }
+    });
+    setConfirmOpen(true);
   };
 
   const handleResetPassword = async (user: User) => {
-    if (!confirm(`确定重置 ${user.username} 的密码？`)) return;
-
-    const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: 'PUT' });
-    const data = await res.json();
-    if (res.ok) {
-      if (data.temp_password) {
-        alert(`密码已重置\n临时密码: ${data.temp_password}\n请妥善保管，用户下次登录需修改密码`);
+    setConfirmMessage(`确定重置 ${user.username} 的密码？`);
+    setPendingAction(async () => {
+      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: 'PUT' });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.temp_password) {
+          toast(`密码已重置\n临时密码: ${data.temp_password}\n请妥善保管，用户下次登录需修改密码`, 'success');
+        } else {
+          toast('密码已重置', 'success');
+        }
       } else {
-        alert('密码已重置');
+        toast(data.error || '重置失败', 'error');
       }
-    } else {
-      alert(data.error || '重置失败');
-    }
+    });
+    setConfirmOpen(true);
   };
 
   const toggleSort = (column: string) => {
@@ -274,7 +293,7 @@ export default function UsersPage() {
                     <td className="px-5 py-3 text-slate-500">{user.last_login_at ? new Date(user.last_login_at).toLocaleDateString('zh-CN') : '-'}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <ActionButton onClick={() => router.push(`/admin/users/${user.id}`)} tone="info">详情</ActionButton>
+                        <ActionButton onClick={() => router.push(`/admin/users/${user.id}`)} tone="info" disabled={loading}>详情</ActionButton>
                         {user.status === 'active' ? (
                           <ActionButton onClick={() => handleBan(user)} tone="danger">封禁</ActionButton>
                         ) : (
@@ -292,6 +311,29 @@ export default function UsersPage() {
       </AdminCard>
 
       {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="确认操作"
+        message={confirmMessage}
+        danger
+        confirmText="确认"
+        cancelText="取消"
+        onConfirm={() => { setConfirmOpen(false); pendingAction?.(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <InputDialog
+        open={inputOpen}
+        title="封禁用户"
+        message={pendingBanUser ? `请输入封禁 ${pendingBanUser.username} 的原因：` : ''}
+        placeholder="封禁原因"
+        confirmText="确认"
+        cancelText="取消"
+        danger
+        onConfirm={handleBanConfirm}
+        onCancel={() => setInputOpen(false)}
+      />
     </div>
   );
 }

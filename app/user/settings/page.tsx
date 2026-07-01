@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/components/UserProvider';
+import { useToast } from '@/components/admin/Toast';
 
 interface UserProfile {
   id: number;
@@ -19,12 +20,14 @@ interface UserProfile {
 export default function UserSettingsPage() {
   const router = useRouter();
   const { user, setUser } = useUser();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState({ nickname: '', bio: '', signature: '', email: '' });
   const [passwordForm, setPasswordForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
-  const [loading, setLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [passwordLoading, setPasswordLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -45,7 +48,7 @@ export default function UserSettingsPage() {
         });
         setAvatarPreview(data.user.avatar || '');
       })
-      .catch(() => router.push('/login'));
+      .catch(() => { toast("登录已过期，请重新登录", "error"); router.push('/login'); });
   }, [router]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,27 +83,27 @@ export default function UserSettingsPage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
-    setLoading(true);
+    setProfileSaving(true);
 
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+        try {
+          const res = await fetch('/api/user/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          });
+          const data = await res.json();
 
-      if (res.ok) {
-        setMessage({ type: 'success', text: data.message || '保存成功' });
-        if (user) setUser({ ...user, nickname: form.nickname });
-      } else {
-        setMessage({ type: 'error', text: data.error || '保存失败' });
-      }
-    } catch {
-      setMessage({ type: 'error', text: '保存失败' });
-    } finally {
-      setLoading(false);
-    }
+          if (res.ok) {
+            setMessage({ type: 'success', text: data.message || '保存成功' });
+            if (user) setUser({ ...user, nickname: form.nickname });
+          } else {
+            setMessage({ type: 'error', text: data.error || '保存失败' });
+          }
+        } catch {
+          setMessage({ type: 'error', text: '保存失败' });
+        } finally {
+          setProfileSaving(false);
+        }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -179,11 +182,12 @@ export default function UserSettingsPage() {
             <div>
               <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/jpeg,image/png,image/webp" />
               <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition-colors text-sm"
-              >
-                📷 上传头像
-              </button>
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={profileSaving || passwordLoading || avatarUploading}
+                              className="px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-lg hover:bg-indigo-500/30 transition-colors text-sm disabled:opacity-50"
+                            >
+                              📷 上传头像
+                            </button>
               <p className="text-gray-500 text-xs mt-1">支持 jpg、png、webp，最大 2MB</p>
             </div>
           </div>
@@ -253,12 +257,12 @@ export default function UserSettingsPage() {
             )}
 
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-medium hover:from-indigo-600 hover:to-blue-600 transition-all disabled:opacity-50"
-            >
-              {loading ? '保存中...' : '💾 保存资料'}
-            </button>
+                          type="submit"
+                          disabled={profileSaving || passwordLoading || avatarUploading}
+                          className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-medium hover:from-indigo-600 hover:to-blue-600 transition-all disabled:opacity-50"
+                        >
+                          {profileSaving ? '保存中...' : '💾 保存资料'}
+                        </button>
           </form>
         </div>
 

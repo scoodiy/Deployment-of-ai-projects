@@ -33,6 +33,14 @@ export default function CreativeWorkshopClient({
   moments = [],
 }: CreativeWorkshopClientProps) {
   const [currentMode, setCurrentMode] = useState<'alchemy' | 'model'>('alchemy'); // 🌟 暂时只保留两个状态
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const switchMode = (mode: 'alchemy' | 'model') => {
+    if (isSwitching) return;
+    setIsSwitching(true);
+    setCurrentMode(mode);
+    setTimeout(() => setIsSwitching(false), 200);
+  };
 
   // =========================================================
   // 🌟 [现实主义] 饱和渐近经验升级系统 (无限等级，难度封顶)
@@ -100,7 +108,7 @@ export default function CreativeWorkshopClient({
       console.groupEnd();
 
     } catch (error) {
-      console.error("经验系统计算流走火入魔：", error);
+      // Silently handle errors in production - console.error is dev-only
     }
   }, [posts, chatters, moments]);
   // =========================================================
@@ -124,14 +132,16 @@ export default function CreativeWorkshopClient({
             {/* 切换开关 */}
             <div className="flex bg-white/40 dark:bg-slate-800/40 backdrop-blur-md p-1.5 rounded-full border border-white/50 dark:border-white/10 shadow-sm relative">
               <button
-                onClick={() => setCurrentMode('alchemy')}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold transition-all z-10 flex items-center gap-2 ${currentMode === 'alchemy' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                onClick={() => switchMode('alchemy')}
+                disabled={isSwitching}
+                className={`relative px-6 py-2.5 rounded-full text-sm font-bold transition-all z-10 flex items-center gap-2 ${currentMode === 'alchemy' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'} ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Beaker size={16} /> 记忆炼金室
               </button>
               <button
-                onClick={() => setCurrentMode('model')}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold transition-all z-10 flex items-center gap-2 ${currentMode === 'model' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                onClick={() => switchMode('model')}
+                disabled={isSwitching}
+                className={`relative px-6 py-2.5 rounded-full text-sm font-bold transition-all z-10 flex items-center gap-2 ${currentMode === 'model' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'} ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Rocket size={16} /> 帝江号舰船
               </button>

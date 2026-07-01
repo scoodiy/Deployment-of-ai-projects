@@ -25,6 +25,7 @@ interface Log {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/dashboard")
@@ -32,9 +33,14 @@ export default function DashboardPage() {
       .then((data) => {
         setStats(data.stats);
         setLogs(data.recentLogs);
+      })
+      .catch((err) => {
+        console.error("Dashboard fetch error:", err);
+        setError("数据加载失败");
       });
   }, []);
 
+  if (error) return <div className="text-red-500">{error}</div>;
   if (!stats) return <div className="text-slate-500">加载中...</div>;
 
   const statCards = [

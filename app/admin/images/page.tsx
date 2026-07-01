@@ -45,6 +45,7 @@ export default function MediaPage() {
   const [keyword, setKeyword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -82,7 +83,7 @@ export default function MediaPage() {
 
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert("文件大小超过50MB限制");
+      toast("文件大小超过50MB限制", "error");
       return;
     }
 
@@ -107,7 +108,8 @@ export default function MediaPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || deletingId) return;
+    setDeletingId(String(confirmDelete.id));
     try {
       const res = await fetch(`/api/admin/media/${confirmDelete.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("删除失败");
@@ -116,6 +118,8 @@ export default function MediaPage() {
       loadFiles();
     } catch (_e) {
       toast("删除失败，请重试", "error");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -227,6 +231,7 @@ export default function MediaPage() {
                     <ActionButton
                       tone="danger"
                       onClick={() => setConfirmDelete({ id: file.id, name: file.original_name })}
+                      disabled={deletingId === String(file.id)}
                     >
                       删除
                     </ActionButton>

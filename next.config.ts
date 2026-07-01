@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data: https:; media-src 'self' https://music.163.com https://*.music.126.net; connect-src 'self' https:; frame-ancestors 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data: https:; media-src 'self' data: blob: mediastream: https://music.163.com https://*.music.126.net; connect-src 'self' https:; frame-ancestors 'self';",
           },
           {
             key: 'Strict-Transport-Security',
@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value: 'camera=(self), microphone=(self), geolocation=()',
           },
         ],
       },

@@ -13,13 +13,22 @@ function useIsAdminRoute() {
   return pathname.startsWith('/admin');
 }
 
+function useIsStandaloneRoute() {
+  const pathname = usePathname();
+  return pathname === '/login';
+}
+
 export function PublicAnnouncementBanner() {
+  if (useIsStandaloneRoute()) return null;
   if (useIsAdminRoute()) return null;
   return <AnnouncementBanner />;
 }
 
 export function PublicOverlays() {
+  const pathname = usePathname();
   if (useIsAdminRoute()) return null;
+  if (useIsStandaloneRoute()) return null;
+  if (pathname.startsWith('/tools/camera-ocr')) return null;
 
   return (
     <>

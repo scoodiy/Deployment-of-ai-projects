@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader, StatusBadge } from "../../../components/admin/AdminUI";
 
 type Config = {
@@ -49,6 +50,7 @@ function mergeConfigs(configs: Config[]) {
 
 export default function AdminAiPage() {
   const [configs, setConfigs] = useState<Config[]>(aiDefaults);
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<string>("");
@@ -82,9 +84,9 @@ export default function AdminAiPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("save failed");
-      alert("AI猫猫配置已保存");
+      toast("AI猫猫配置已保存", "success");
     } catch {
-      alert("保存失败");
+      toast("保存失败", "error");
     } finally {
       setSaving(false);
     }
@@ -109,7 +111,7 @@ export default function AdminAiPage() {
         description="管理前台猫猫的显示状态、模型接口和回复人设。"
         actions={
           <>
-            <ActionButton tone="muted" onClick={checkRuntimeConfig}>检测当前接口</ActionButton>
+            <ActionButton tone="muted" onClick={checkRuntimeConfig} disabled={loading}>检测当前接口</ActionButton>
             <ActionButton tone="info" onClick={save} disabled={saving || loading}>
               {saving ? "保存中..." : "保存配置"}
             </ActionButton>

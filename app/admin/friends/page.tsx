@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ActionButton, AdminCard, AdminPageHeader, StatusBadge } from "../../../components/admin/AdminUI";
+import ConfirmDialog from "../../../components/admin/ConfirmDialog";
+import { useToast } from "../../../components/admin/Toast";
 
 interface Friend {
   id: number;
@@ -19,6 +21,12 @@ export default function FriendsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", url: "", description: "", avatar: "", theme_color: "rgba(99, 102, 241, 0.5)", sort_order: 0, is_enabled: true });
   const [editId, setEditId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: string; id: number; loading?: boolean } | null>(null);
+  const [pendingName, setPendingName] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const loadFriends = useCallback(async () => {
     const res = await fetch("/api/admin/friends");
@@ -30,15 +38,24 @@ export default function FriendsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     const url = editId ? `/api/admin/friends/${editId}` : "/api/admin/friends";
     const method = editId ? "PUT" : "POST";
 
-    await fetch(url, {
+    const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
 
+    if (!res.ok) {
+      setLoading(false);
+      const data = await res.json().catch(() => ({}));
+      toast(data.error || "操作失败", "error");
+      return;
+    }
+
+    setLoading(false);
     setShowForm(false);
     setEditId(null);
     setForm({ name: "", url: "", description: "", avatar: "", theme_color: "rgba(99, 102, 241, 0.5)", sort_order: 0, is_enabled: true });
@@ -59,10 +76,29 @@ export default function FriendsPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`确定删除友链「${name}」？`)) return;
-    await fetch(`/api/admin/friends/${id}`, { method: "DELETE" });
-    loadFriends();
+  const handleDelete = (id: number, name: string) => {
+    setPendingName(name);
+    setPendingAction({ type: 'delete', id, loading: false });
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingAction || pendingAction.type !== 'delete') return;
+    const { id } = pendingAction;
+    setPendingAction({ type: 'delete', id, loading: true });
+    try {
+      const res = await fetch(`/api/admin/friends/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `删除失败 (${res.status})`);
+      }
+      await res.json();
+      loadFriends();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "删除失败", "error");
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   return (
@@ -95,7 +131,7 @@ export default function FriendsPage() {
               </label>
             </div>
             <div className="flex gap-2">
-              <ActionButton tone="info" type="submit">{editId ? "更新" : "添加"}</ActionButton>
+              <ActionButton tone="info" type="submit" disabled={loading}>{loading ? "保存中..." : editId ? "更新" : "添加"}</ActionButton>
               <ActionButton tone="muted" onClick={() => setShowForm(false)}>取消</ActionButton>
             </div>
           </form>
@@ -131,7 +167,7 @@ export default function FriendsPage() {
                   <td className="px-5 py-3">
                     <div className="flex gap-2">
                       <ActionButton tone="info" onClick={() => handleEdit(f)}>编辑</ActionButton>
-                      <ActionButton tone="danger" onClick={() => handleDelete(f.id, f.name)}>删除</ActionButton>
+                      <ActionButton tone="danger" onClick={() => handleDelete(f.id, f.name)} disabled={pendingAction?.id === f.id && pendingAction?.loading}>删除</ActionButton>
                     </div>
                   </td>
                 </tr>
@@ -140,6 +176,17 @@ export default function FriendsPage() {
           </table>
         </div>
       </AdminCard>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="确认删除"
+        message={`确定删除友链「${pendingName}」？`}
+        danger
+        confirmText="确认"
+        cancelText="取消"
+        onConfirm={() => { setConfirmOpen(false); confirmDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

@@ -40,7 +40,9 @@ export default function MusicClient() {
   const activeLyricRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'lyrics' | 'playlist'>('lyrics');
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [playing, setPlaying] = useState(false);
 
   // 进入音乐页自动加载（有缓存则跳过）
   useEffect(() => {
@@ -48,6 +50,12 @@ export default function MusicClient() {
       retryFetch();
     }
   }, [playlist.length, isLoading, retryFetch]);
+
+  // 搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const parsedLyrics = useMemo<LyricLine[]>(() => {
     if (!currentSong) return [];
@@ -117,6 +125,15 @@ export default function MusicClient() {
     }
   };
 
+  const handleTogglePlay = async () => {
+    setPlaying(true);
+    try {
+      await togglePlay();
+    } finally {
+      setPlaying(false);
+    }
+  };
+
   const handlePlaySong = (index: number) => {
     if (playlist.length === 0) {
       retryFetch();
@@ -126,13 +143,13 @@ export default function MusicClient() {
   };
 
   const filteredPlaylist = useMemo(() => {
-    if (!searchQuery.trim()) return playlist;
-    const lowerQuery = searchQuery.toLowerCase();
+    if (!debouncedSearch.trim()) return playlist;
+    const lowerQuery = debouncedSearch.toLowerCase();
     return playlist.filter((song: SongItem) =>
       (song.title || song.name || '').toLowerCase().includes(lowerQuery) ||
       (song.artist || song.author || '').toLowerCase().includes(lowerQuery)
     );
-  }, [playlist, searchQuery]);
+  }, [playlist, debouncedSearch]);
 
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
@@ -174,7 +191,8 @@ export default function MusicClient() {
               <p className="text-xs text-slate-400">请在后台添加音乐数据，或检查网络连接</p>
               <button
                 onClick={retryFetch}
-                className="mt-2 px-5 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-full transition-all border border-indigo-500/20"
+                disabled={isLoading}
+                className="mt-2 px-5 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-full transition-all border border-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 重新加载
               </button>
@@ -234,8 +252,8 @@ export default function MusicClient() {
                   <button onClick={togglePlayMode} className="p-2 transition-transform hover:scale-110">{getPlayModeIcon()}</button>
                   <div className="flex items-center gap-3 md:gap-4 lg:gap-6">
                     <button onClick={prevSong} className="p-2 text-slate-700 dark:text-slate-300 hover:text-indigo-500 transition-transform hover:scale-110"><SkipBack size={24} className="md:w-7 md:h-7" fill="currentColor" /></button>
-                    <button onClick={togglePlay} className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:scale-105 shadow-xl shadow-indigo-500/40">
-                      {isPlaying ? <Pause size={28} className="md:w-8 md:h-8" fill="currentColor" /> : <Play size={28} className="md:w-8 md:h-8 ml-1" fill="currentColor" />}
+                    <button onClick={handleTogglePlay} disabled={playing} className="w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-full hover:scale-105 shadow-xl shadow-indigo-500/40 transition-all">
+                      {playing ? <Disc3 size={28} className="md:w-8 md:h-8 animate-spin" /> : isPlaying ? <Pause size={28} className="md:w-8 md:h-8" fill="currentColor" /> : <Play size={28} className="md:w-8 md:h-8 ml-1" fill="currentColor" />}
                     </button>
                     <button onClick={nextSong} className="p-2 text-slate-700 dark:text-slate-300 hover:text-indigo-500 transition-transform hover:scale-110"><SkipForward size={24} className="md:w-7 md:h-7" fill="currentColor" /></button>
                   </div>
@@ -296,8 +314,8 @@ export default function MusicClient() {
                     <div className="relative w-full max-w-md mx-auto group mb-4 md:mb-8 shrink-0">
                       <div className="absolute inset-0 bg-indigo-500/5 blur-xl group-focus-within:bg-indigo-500/10 transition-all rounded-full" />
                       <Search className="w-4 h-4 md:w-5 md:h-5 absolute left-4 top-1/2 -translate-y-1/2 z-10 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      <input type="text" placeholder="搜索音轨..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-10 md:h-12 pl-10 md:pl-12 pr-10 md:pr-12 bg-white/30 dark:bg-slate-900/60 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-full text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 shadow-inner transition-all" />
-                      {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-black/10 rounded-full transition-colors"><X size={14} className="text-slate-500" /></button>)}
+                      <input type="text" placeholder="搜索音轨..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="w-full h-10 md:h-12 pl-10 md:pl-12 pr-10 md:pr-12 bg-white/30 dark:bg-slate-900/60 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-full text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 shadow-inner transition-all" />
+                      {searchInput && (<button onClick={() => setSearchInput('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-black/10 rounded-full transition-colors"><X size={14} className="text-slate-500" /></button>)}
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2 md:gap-2.5">
                       <AnimatePresence mode='popLayout'>

@@ -5,6 +5,7 @@ import LoadingState from "../../../components/LoadingState";
 import ErrorState from "../../../components/ErrorState";
 import EmptyState from "../../../components/EmptyState";
 import ConfirmDialog from "../../../components/admin/ConfirmDialog";
+import { useToast } from "../../../components/admin/Toast";
 import { ActionButton, AdminCard, AdminPageHeader, StatusBadge } from "../../../components/admin/AdminUI";
 
 interface Comment {
@@ -42,10 +43,13 @@ function getStatusLabel(status: string): string {
 
 export default function CommentsPage() {
   const [comments, setComments] = useState<Comment[]>([]);
+  const { toast } = useToast();
   const [filter, setFilter] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
 
   const loadComments = useCallback(async () => {
     setLoading(true);
@@ -71,28 +75,45 @@ export default function CommentsPage() {
   useEffect(() => { loadComments(); }, [loadComments]);
 
   const handleStatusChange = async (id: number, status: string) => {
+    if (pendingIds.has(String(id))) return;
+    setPendingIds(prev => new Set(prev).add(String(id)));
     try {
-      const res = await fetch(`/api/admin/comments/${id}`, {
-        method: "PUT",
+      const res = await fetch(`/api/admin/comments/${id}/status`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("操作失败");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `操作失败 (${res.status})`);
+      }
       loadComments();
-    } catch (_e) {
-      alert("操作失败，请重试");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "操作失败", "error");
+    } finally {
+      setPendingIds(prev => {
+        const next = new Set(prev);
+        next.delete(String(id));
+        return next;
+      });
     }
   };
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
+    setDeletingId(confirmDelete);
     try {
       const res = await fetch(`/api/admin/comments/${confirmDelete}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("删除失败");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `删除失败 (${res.status})`);
+      }
       setConfirmDelete(null);
       loadComments();
-    } catch (_e) {
-      alert("删除失败，请重试");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "删除失败", "error");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -180,12 +201,12 @@ export default function CommentsPage() {
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         {c.status !== "approved" && (
-                          <ActionButton tone="success" onClick={() => handleStatusChange(c.id, "approved")}>通过</ActionButton>
+                          <ActionButton tone="success" onClick={() => handleStatusChange(c.id, "approved")} disabled={pendingIds.has(String(c.id))}>通过</ActionButton>
                         )}
                         {c.status !== "rejected" && (
-                          <ActionButton tone="warning" onClick={() => handleStatusChange(c.id, "rejected")}>拒绝</ActionButton>
+                          <ActionButton tone="warning" onClick={() => handleStatusChange(c.id, "rejected")} disabled={pendingIds.has(String(c.id))}>拒绝</ActionButton>
                         )}
-                        <ActionButton tone="danger" onClick={() => setConfirmDelete(c.id)}>删除</ActionButton>
+                        <ActionButton tone="danger" onClick={() => setConfirmDelete(c.id)} disabled={deletingId === c.id}>删除</ActionButton>
                       </div>
                     </td>
                   </tr>

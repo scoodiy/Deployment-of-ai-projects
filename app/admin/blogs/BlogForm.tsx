@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "../../../components/admin/Toast";
 
 interface MediaFile {
   id: number;
@@ -19,6 +20,7 @@ const DRAFT_KEY_PREFIX = "blog_draft_";
 
 export default function BlogForm({ blogId }: BlogFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState({
     title: "",
     slug: "",
@@ -35,6 +37,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
   const [tagsList, setTagsList] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [actionType, setActionType] = useState<'draft' | 'published'>('draft');
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
@@ -154,10 +157,10 @@ export default function BlogForm({ blogId }: BlogFormProps) {
         router.push("/admin/blogs");
       } else {
         const data = await res.json();
-        alert(data.error?.message || data.error || "保存失败");
+        toast(data.error?.message || data.error || "保存失败", "error");
       }
     } catch {
-      alert("保存失败");
+      toast("保存失败", "error");
     } finally {
       setSaving(false);
     }
@@ -242,7 +245,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("文件超过10MB");
+      toast("文件超过10MB", "error");
       return;
     }
     const fd = new FormData();
@@ -253,10 +256,10 @@ export default function BlogForm({ blogId }: BlogFormProps) {
       if (res.ok && data.url) {
         setForm((prev) => ({ ...prev, cover_image: data.url }));
       } else {
-        alert(data.error?.message || data.error || "上传失败");
+        toast(data.error?.message || data.error || "上传失败", "error");
       }
     } catch {
-      alert("上传失败");
+      toast("上传失败", "error");
     }
     e.target.value = "";
   };
@@ -264,14 +267,14 @@ export default function BlogForm({ blogId }: BlogFormProps) {
   // Preview
   const handlePreview = () => {
     if (!form.slug) {
-      alert("请先填写 Slug 后再预览");
+      toast("请先填写 Slug 后再预览", "error");
       return;
     }
     window.open(`/posts/${form.slug}`, "_blank");
   };
 
   return (
-    <form onSubmit={(e) => handleSubmit(e, form.status)} className="space-y-6">
+    <form onSubmit={(e) => handleSubmit(e, actionType)} className="space-y-6">
       {/* Header bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-5 py-3 shadow-sm">
         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -297,22 +300,50 @@ export default function BlogForm({ blogId }: BlogFormProps) {
             手动保存草稿
           </button>
           <button
-            type="submit"
+            type="button"
             disabled={saving}
-            onClick={(e) => {
-              setForm({ ...form, status: "draft" });
-              handleSubmit(e, "draft");
+            onClick={() => {
+              setActionType('draft');
+              setSaving(true);
+              const url = blogId ? `/api/admin/blogs/${blogId}` : "/api/admin/blogs";
+              const method = blogId ? "PUT" : "POST";
+              fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...form, status: "draft", tags: tagsList }),
+              }).then(res => {
+                if (res.ok) {
+                  clearDraft();
+                  router.push("/admin/blogs");
+                } else {
+                  res.json().then(data => toast(data.error || "保存失败", "error"));
+                }
+              }).catch(() => toast("保存失败", "error")).finally(() => setSaving(false));
             }}
             className="inline-flex min-h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
           >
             {saving ? "保存中..." : "保存草稿"}
           </button>
           <button
-            type="submit"
+            type="button"
             disabled={saving}
-            onClick={(e) => {
-              setForm({ ...form, status: "published" });
-              handleSubmit(e, "published");
+            onClick={() => {
+              setActionType('published');
+              setSaving(true);
+              const url = blogId ? `/api/admin/blogs/${blogId}` : "/api/admin/blogs";
+              const method = blogId ? "PUT" : "POST";
+              fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...form, status: "published", tags: tagsList }),
+              }).then(res => {
+                if (res.ok) {
+                  clearDraft();
+                  router.push("/admin/blogs");
+                } else {
+                  res.json().then(data => toast(data.error || "发布失败", "error"));
+                }
+              }).catch(() => toast("发布失败", "error")).finally(() => setSaving(false));
             }}
             className="inline-flex min-h-9 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
           >
