@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { siteConfig } from '../siteConfig';
+import { siteConfig } from './site-config';
 
 interface BlogRow {
   id: number;
