@@ -163,7 +163,7 @@ export async function POST(req: Request) {
       console.error("🔥 [5/5] 运行时崩溃:", error instanceof Error ? error.message : error);
     }
     return NextResponse.json(
-      { error: process.env.NODE_ENV === 'production' ? '服务器内部错误，请稍后重试' : (error instanceof Error ? error.message : '未知错误') },
+      { error: 'AI 服务暂时不可用' },
       { status: 500 }
     );
   }
