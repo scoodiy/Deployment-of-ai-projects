@@ -26,8 +26,8 @@ export default function UserSettingsPage() {
   const [form, setForm] = useState({ nickname: '', bio: '', signature: '', email: '' });
   const [passwordForm, setPasswordForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [profileSaving, setProfileSaving] = useState(false);
-    const [avatarUploading, setAvatarUploading] = useState(false);
-    const [passwordLoading, setPasswordLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -63,6 +63,7 @@ export default function UserSettingsPage() {
     const formData = new FormData();
     formData.append('file', file);
 
+    setAvatarUploading(true);
     try {
       const res = await fetch('/api/user/avatar', { method: 'POST', body: formData });
       const data = await res.json();
@@ -77,6 +78,8 @@ export default function UserSettingsPage() {
       }
     } catch {
       setMessage({ type: 'error', text: '上传失败' });
+    } finally {
+      setAvatarUploading(false);
     }
   };
 

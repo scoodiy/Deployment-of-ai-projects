@@ -12,7 +12,7 @@ export const metadata = {
   description: "日常碎片与灵感记录",
 };
 
-export default function ChatterPage() {
+export default async function ChatterPage() {
   // 注意：这里我们假设你的 md 文件放在根目录的 chatters 文件夹里
   const chattersDirectory = path.join(process.cwd(), 'chatters');
   let chatters: {

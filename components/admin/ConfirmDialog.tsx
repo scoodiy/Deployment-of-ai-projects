@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -58,22 +58,31 @@ export function InputDialog({
 }: InputDialogProps) {
   const [value, setValue] = useState('');
 
+  const handleCancel = useCallback(() => {
+    setValue('');
+    onCancel();
+  }, [onCancel]);
+
+  const handleConfirm = useCallback(() => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setValue('');
+    onConfirm(trimmed);
+  }, [onConfirm, value]);
+
   useEffect(() => {
     if (open) {
-      const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+      const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleCancel(); };
       window.addEventListener('keydown', handler);
       return () => window.removeEventListener('keydown', handler);
     }
-  }, [open, onCancel]);
-
-  // Reset input when dialog opens
-  useEffect(() => { if (open) setValue(''); }, [open]);
+  }, [open, handleCancel]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCancel} />
       <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-white/20">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{message}</p>
@@ -84,12 +93,12 @@ export function InputDialog({
           placeholder={placeholder}
           className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
           autoFocus
-          onKeyDown={e => { if (e.key === 'Enter' && value.trim()) onConfirm(value.trim()); }}
+          onKeyDown={e => { if (e.key === 'Enter' && value.trim()) handleConfirm(); }}
         />
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">{cancelText}</button>
+          <button onClick={handleCancel} className="px-4 py-2 text-sm rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">{cancelText}</button>
           <button
-            onClick={() => value.trim() && onConfirm(value.trim())}
+            onClick={handleConfirm}
             disabled={!value.trim()}
             className={`px-4 py-2 text-sm rounded-lg text-white transition-colors ${
               !value.trim() ? 'bg-slate-300 dark:bg-slate-600 cursor-not-allowed' : danger ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-500 hover:bg-indigo-600'

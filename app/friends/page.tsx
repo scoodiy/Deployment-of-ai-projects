@@ -8,7 +8,7 @@ export const metadata = {
   description: "赛博空间里的有趣灵魂",
 };
 
-export default function FriendsPage() {
+export default async function FriendsPage() {
   return (
     <div className="min-h-screen relative pb-20">
       <Navbar />

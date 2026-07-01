@@ -6,6 +6,6 @@ export const metadata = {
   description: "智能AI对话助手，陪你聊天解惑",
 };
 
-export default function AiPage() {
+export default async function AiPage() {
   return <AiClient />;
 }

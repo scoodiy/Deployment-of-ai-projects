@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    '/api/moments': ['./moments/**/*.md', './posts/moments/**/*.md'],
+  },
   images: {
     // 保留 unoptimized 避免服务器 500 错误，但配置好 remotePatterns 以便未来启用
     unoptimized: true,

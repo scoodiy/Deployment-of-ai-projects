@@ -1,462 +1,342 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Loader2, RefreshCw, BarChart3, Search } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, RefreshCw, ShieldAlert, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
 
-interface IndexItem {
-  name: string;
-  code: string;
-  price: string;
-  change: string;
-  changePct: string;
-  isUp: boolean;
+interface StockReport {
+  id: number | string;
+  stocks: string[];
+  market?: string;
+  report_type: 'stock_analysis' | 'market_review';
+  summary: string;
+  report_markdown: string;
+  raw_data?: unknown;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  error_message?: string;
+  created_at?: string;
 }
 
-interface MarketBroad {
-  upCount: number;
-  downCount: number;
-  upDownRatio: string;
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  report_markdown?: string;
+  summary?: string;
+  warnings?: string[];
+  created_at?: string;
+  error?: string;
 }
 
-interface DailyData {
-  date: string;
-  indices: IndexItem[];
-  broad: MarketBroad;
-  topGainers: Array<{ name: string; code: string; changePct: string }>;
-  topLosers: Array<{ name: string; code: string; changePct: string }>;
+interface ConfigStatus {
+  configured: boolean;
+  required_missing_keys?: string[];
 }
 
-interface StockQuote {
-  stock_code: string;
-  stock_name: string;
-  current_price: number;
-  change: number | null;
-  change_percent: number | null;
+function getRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-const API_BASE = 'http://127.0.0.1:8000';
+function getArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === 'object') as Record<string, unknown>[] : [];
+}
+
+function formatTime(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+async function readJson<T>(url: string, init?: RequestInit): Promise<{ ok: boolean; payload: ApiResponse<T> }> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+  const payload = await res.json().catch(() => ({ success: false, error: '接口返回无法解析' })) as ApiResponse<T>;
+  return { ok: res.ok, payload };
+}
 
 export default function DailyStockTool() {
+  const [market, setMarket] = useState('cn');
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<DailyData | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState('');
-  const [lastUpdate, setLastUpdate] = useState<string>('');
-  const [selectedStock, setSelectedStock] = useState('');
-  const [stockQuote, setStockQuote] = useState<StockQuote | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteError, setQuoteError] = useState('');
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [report, setReport] = useState<StockReport | null>(null);
+  const [review, setReview] = useState<Record<string, unknown>>({});
+  const [history, setHistory] = useState<StockReport[]>([]);
+  const [config, setConfig] = useState<ConfigStatus | null>(null);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
+  const loadConfig = useCallback(async () => {
+    const { payload } = await readJson<ConfigStatus>('/api/stock/config/status');
+    if (payload.success && payload.data) setConfig(payload.data);
   }, []);
 
-  const pollTaskStatus = async (taskId: string, maxAttempts = 60): Promise<Record<string, unknown> | null> => {
-    for (let i = 0; i < maxAttempts; i++) {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/analysis/tasks/${taskId}`, {
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const task = await res.json();
-        const status = task.status;
-
-        if (status === 'completed') {
-          return task;
-        } else if (status === 'failed') {
-          throw new Error(task.error || 'Task failed');
-        } else if (status === 'cancel_requested' || status === 'cancelled') {
-          throw new Error('Task was cancelled');
-        }
-
-        // Still processing, wait before next poll
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (e) {
-        if (e instanceof Error && e.name === 'AbortError') {
-          continue;
-        }
-        throw e;
-      }
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const { payload } = await readJson<StockReport[]>('/api/stock/reports?report_type=market_review&limit=8');
+      if (payload.success && Array.isArray(payload.data)) setHistory(payload.data);
+    } finally {
+      setHistoryLoading(false);
     }
-    throw new Error('Task polling timed out');
-  };
+  }, []);
 
-  const fetchDailyData = useCallback(async () => {
+  useEffect(() => {
+    loadConfig().catch(() => setConfig(null));
+    loadHistory().catch(() => undefined);
+  }, [loadConfig, loadHistory]);
+
+  const runReview = useCallback(async () => {
     setLoading(true);
     setError('');
+    setWarnings([]);
 
     try {
-      // Step 1: Trigger market-review (async, returns task_id)
-      const triggerRes = await fetch(`${API_BASE}/api/v1/analysis/market-review`, {
+      const { ok, payload } = await readJson<{ report?: StockReport; review?: Record<string, unknown> }>('/api/stock/market-review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ market }),
       });
 
-      if (!triggerRes.ok) {
-        const errText = await triggerRes.text();
-        throw new Error(`触发失败: ${triggerRes.status} - ${errText}`);
+      const nextReport = payload.data?.report;
+      if (nextReport) {
+        setReport(nextReport);
+        setReview(payload.data?.review || getRecord(nextReport.raw_data));
       }
+      setWarnings(payload.warnings || []);
 
-      const triggerResult = await triggerRes.json();
-
-      // Handle 409 Conflict (task already running)
-      if (triggerRes.status === 409) {
-        setError('市场复盘任务正在执行中，请稍后再试');
-        setData(getMockData());
-        setLastUpdate(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
-        setLoading(false);
+      if (!ok || !payload.success) {
+        setError(payload.error || '市场复盘失败');
         return;
       }
 
-      const taskId = triggerResult.task_id;
-      if (!taskId) {
-        throw new Error('未返回任务ID');
+      await loadHistory();
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : '市场复盘请求失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadHistory, market]);
+
+  const openHistory = useCallback(async (id: string | number) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { ok, payload } = await readJson<StockReport>(`/api/stock/reports/${encodeURIComponent(String(id))}`);
+      if (!ok || !payload.success || !payload.data) {
+        setError(payload.error || '读取历史复盘失败');
+        return;
       }
-
-      // Step 2: Poll for task completion
-      setError('正在获取复盘数据...');
-      const taskResult = await pollTaskStatus(taskId);
-
-      if (!taskResult) {
-        throw new Error('获取任务状态失败');
-      }
-
-      // Step 3: Parse the result
-      const payload = taskResult.market_review_payload as Record<string, unknown> || {};
-      const report = taskResult.market_review_report as string || '';
-
-      // Build indices from payload
-      const indices: IndexItem[] = (payload.indices as Array<Record<string, unknown>> || []).map((item: Record<string, unknown>) => {
-        const changePct = parseFloat(String(item.changePct || item.change_percent || '0'));
-        return {
-          name: String(item.name || item.name_cn || '未知'),
-          code: String(item.code || item.stock_code || ''),
-          price: String(item.price || item.current_price || '0'),
-          change: String(item.change || '0'),
-          changePct: String(item.changePct || item.change_percent || '0%'),
-          isUp: changePct >= 0,
-        };
-      });
-
-      const broad: MarketBroad = payload.broad as MarketBroad || {
-        upCount: 0,
-        downCount: 0,
-        upDownRatio: '0',
-      };
-
-      const topGainers = (payload.topGainers as Array<Record<string, unknown>> || []).slice(0, 5).map((item: Record<string, unknown>) => ({
-        name: String(item.name || '未知'),
-        code: String(item.code || ''),
-        changePct: String(item.changePct || item.change_percent || '0%'),
-      }));
-
-      const topLosers = (payload.topLosers as Array<Record<string, unknown>> || []).slice(0, 5).map((item: Record<string, unknown>) => ({
-        name: String(item.name || '未知'),
-        code: String(item.code || ''),
-        changePct: String(item.changePct || item.change_percent || '0%'),
-      }));
-
-      setData({
-        date: new Date().toLocaleDateString('zh-CN'),
-        indices,
-        broad,
-        topGainers,
-        topLosers,
-      });
-
-      setLastUpdate(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
-      setError('');
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '获取数据失败';
-      setError(message);
-      // Fallback to mock data
-      setData(getMockData());
-      setLastUpdate(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+      setReport(payload.data);
+      setReview(getRecord(payload.data.raw_data));
+      setWarnings(payload.warnings || []);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : '读取历史复盘失败');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchStockQuote = useCallback(async () => {
-    if (!selectedStock.trim()) {
-      setQuoteError('请输入股票代码');
-      return;
-    }
-
-    setQuoteLoading(true);
-    setQuoteError('');
-    setStockQuote(null);
-
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/stocks/${encodeURIComponent(selectedStock.trim())}/quote`, {
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error('股票不存在');
-        }
-        throw new Error(`查询失败: ${res.status}`);
-      }
-
-      const quote: StockQuote = await res.json();
-      setStockQuote(quote);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '查询失败';
-      setQuoteError(message);
-    } finally {
-      setQuoteLoading(false);
-    }
-  }, [selectedStock]);
-
-  const getMockData = (): DailyData => {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('zh-CN');
-    return {
-      date: dateStr,
-      indices: [
-        { name: '上证指数', code: 'SH000001', price: '3285.67', change: '+15.23', changePct: '+0.47%', isUp: true },
-        { name: '深证成指', code: 'SZ399001', price: '10828.45', change: '+85.12', changePct: '+0.79%', isUp: true },
-        { name: '创业板指', code: 'SZ399006', price: '2156.78', change: '-12.34', changePct: '-0.57%', isUp: false },
-        { name: '沪深300', code: 'SH000300', price: '3892.12', change: '+22.45', changePct: '+0.58%', isUp: true },
-        { name: '科创50', code: 'SH000688', price: '1024.56', change: '-5.67', changePct: '-0.55%', isUp: false },
-      ],
-      broad: { upCount: 2847, downCount: 1983, upDownRatio: '1.44' },
-      topGainers: [
-        { name: '华力创通', code: '300045', changePct: '+20.00%' },
-        { name: '天银机电', code: '300342', changePct: '+20.00%' },
-        { name: '星星科技', code: '300256', changePct: '+19.90%' },
-        { name: '天和防务', code: '300397', changePct: '+19.87%' },
-        { name: '天翔环境', code: '300362', changePct: '+19.84%' },
-      ],
-      topLosers: [
-        { name: '*ST左江', code: '300799', changePct: '-20.00%' },
-        { name: '*ST中天', code: '300159', changePct: '-20.00%' },
-        { name: '*ST文化', code: '300089', changePct: '-19.91%' },
-        { name: '*ST辅仁', code: '600781', changePct: '-19.87%' },
-        { name: '*ST柏龙', code: '002776', changePct: '-19.76%' },
-      ],
-    };
-  };
-
-  const formatChange = (val: number | null) => {
-    if (val === null) return '--';
-    return val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
-  };
-
-  const formatPercent = (val: number | null) => {
-    if (val === null) return '--';
-    return val >= 0 ? `+${val.toFixed(2)}%` : `${val.toFixed(2)}%`;
-  };
+  const reviewRaw = getRecord(review.raw);
+  const payload = getRecord(review.market_review_payload || reviewRaw.market_review_payload);
+  const indices = getArray(payload.indices || payload.index_data || payload.major_indices).slice(0, 6);
+  const sectors = getArray(payload.sectors || payload.sector_performance || payload.hot_sectors).slice(0, 8);
+  const breadth = getRecord(payload.broad || payload.breadth || payload.market_breadth);
+  const emotion = payload.market_sentiment || payload.sentiment || payload.emotion || '见 AI 总结';
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="flex flex-col gap-3"
+      exit={{ opacity: 0, x: 16 }}
+      className="flex flex-col gap-4"
     >
-      {/* Header with refresh */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-            {data ? data.date : '每日行情'}
-          </span>
-          {lastUpdate && (
-            <span className="text-[9px] text-slate-400 dark:text-slate-500">
-              更新 {lastUpdate}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={fetchDailyData}
-          disabled={loading}
-          className="flex items-center gap-1 px-2 py-1 text-[10px] text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-40"
-        >
-          <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
-          刷新
-        </button>
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="text-[10px] text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-xl">
-          {error}
-          {!data && <span>（显示模拟数据）</span>}
-        </div>
-      )}
-
-      {/* Loading state */}
-      {loading && !data && (
-        <div className="h-48 flex flex-col items-center justify-center gap-2 text-slate-400">
-          <Loader2 className="animate-spin text-indigo-400" size={24} />
-          <span className="text-[10px] font-bold">加载每日行情...</span>
-        </div>
-      )}
-
-      {/* Stock quote search */}
-      <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-white/40 dark:bg-slate-700/40">
-        <div className="flex items-center gap-1.5">
-          <Search size={10} className="text-slate-500" />
-          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">股票查询</span>
-        </div>
-        <div className="flex gap-1.5">
-          <input
-            type="text"
-            value={selectedStock}
-            onChange={e => setSelectedStock(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && fetchStockQuote()}
-            placeholder="输入代码如 600519"
-            className="flex-1 px-2 py-1 text-[10px] rounded bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-white placeholder-slate-400"
-          />
+      <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-base font-black text-slate-900 dark:text-white">大盘复盘 / 市场分析</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              触发 daily_stock_analysis 的市场复盘能力，展示指数、涨跌家数、板块表现、风险提示和 AI 总结。
+            </p>
+          </div>
           <button
-            onClick={fetchStockQuote}
-            disabled={quoteLoading}
-            className="px-2 py-1 text-[10px] bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:opacity-40 transition-colors"
+            onClick={() => {
+              loadConfig().catch(() => undefined);
+              loadHistory().catch(() => undefined);
+            }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-indigo-500"
+            aria-label="刷新配置与历史"
           >
-            {quoteLoading ? <Loader2 size={10} className="animate-spin" /> : '查询'}
+            <RefreshCw size={16} />
           </button>
         </div>
-        {quoteError && (
-          <div className="text-[9px] text-red-500">{quoteError}</div>
+
+        {config && !config.configured && (
+          <div className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <div className="flex items-center gap-2 font-bold">
+              <ShieldAlert size={14} />
+              股票分析服务配置未完整
+            </div>
+            <p className="mt-1">缺少：{config.required_missing_keys?.join('、') || '模型或数据源'}。复盘可能使用降级数据或返回失败原因。</p>
+          </div>
         )}
-        {stockQuote && (
-          <div className="flex items-center justify-between px-2 py-1.5 rounded bg-slate-50 dark:bg-slate-800/50">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-700 dark:text-white">
-                {stockQuote.stock_name} ({stockQuote.stock_code})
-              </span>
-              <span className="text-[11px] font-black text-slate-800 dark:text-white">
-                {stockQuote.current_price.toFixed(2)}
-              </span>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex flex-1 flex-col gap-1">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">市场</span>
+            <select
+              value={market}
+              onChange={(event) => setMarket(event.target.value)}
+              className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-950/50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 dark:text-white"
+            >
+              <option value="cn">A 股市场</option>
+              <option value="hk">港股市场</option>
+              <option value="us">美股市场</option>
+              <option value="global">全球市场</option>
+            </select>
+          </label>
+          <button
+            onClick={runReview}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-500 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            生成复盘
+          </button>
+        </div>
+      </div>
+
+      {warnings.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          {warnings.map((warning) => <p key={warning}>{warning}</p>)}
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-2xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-xs text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+          <div className="flex items-center gap-2 font-bold"><AlertTriangle size={14} />{error}</div>
+        </div>
+      )}
+
+      {!report && !loading && (
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-white/10 bg-white/30 dark:bg-slate-900/30 p-6 text-center">
+          <Sparkles className="mx-auto text-slate-400" size={28} />
+          <p className="mt-2 text-sm font-bold text-slate-700 dark:text-slate-200">等待生成复盘</p>
+          <p className="mt-1 text-xs text-slate-400">点击“生成复盘”后，会展示市场摘要、主要指数、板块和完整报告。</p>
+        </div>
+      )}
+
+      {report && (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4 md:col-span-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                <CheckCircle2 size={14} className={report.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'} />
+                {report.status}
+              </div>
+              <h3 className="mt-3 text-lg font-black text-slate-900 dark:text-white">{report.summary || '市场复盘'}</h3>
+              <p className="mt-1 text-[11px] text-slate-400">{formatTime(report.created_at)}</p>
             </div>
-            <div className="flex flex-col items-end">
-              <span className={`text-[10px] font-bold ${(stockQuote.change ?? 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {formatChange(stockQuote.change)}
-              </span>
-              <span className={`text-[10px] font-bold ${(stockQuote.change_percent ?? 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                {formatPercent(stockQuote.change_percent)}
-              </span>
+            <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4">
+              <p className="text-[10px] font-bold text-slate-400">市场情绪</p>
+              <p className="mt-2 text-sm font-black text-indigo-500">{String(emotion)}</p>
             </div>
+            <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4">
+              <p className="text-[10px] font-bold text-slate-400">涨跌家数</p>
+              <p className="mt-2 text-sm font-black text-slate-800 dark:text-white">
+                {String(breadth.upCount || breadth.up_count || '--')} / {String(breadth.downCount || breadth.down_count || '--')}
+              </p>
+            </div>
+          </div>
+
+          {(indices.length > 0 || sectors.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4">
+                <h3 className="mb-3 text-sm font-black text-slate-900 dark:text-white">主要指数</h3>
+                <div className="grid gap-2">
+                  {indices.length === 0 ? <p className="text-xs text-slate-400">暂无指数数据。</p> : indices.map((item, index) => {
+                    const changeText = String(item.changePct || item.change_percent || item.pct_chg || item.change || '--');
+                    const isDown = changeText.includes('-');
+                    return (
+                      <div key={`${String(item.code || item.name || index)}`} className="flex items-center justify-between rounded-xl bg-white/50 dark:bg-slate-950/30 px-3 py-2 text-xs">
+                        <div>
+                          <p className="font-black text-slate-800 dark:text-white">{String(item.name || item.name_cn || item.code || '指数')}</p>
+                          <p className="text-[10px] text-slate-400">{String(item.code || '')}</p>
+                        </div>
+                        <div className={`inline-flex items-center gap-1 font-black ${isDown ? 'text-emerald-500' : 'text-red-500'}`}>
+                          {isDown ? <TrendingDown size={13} /> : <TrendingUp size={13} />}
+                          {changeText}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 p-4">
+                <h3 className="mb-3 text-sm font-black text-slate-900 dark:text-white">板块表现</h3>
+                <div className="flex flex-wrap gap-2">
+                  {sectors.length === 0 ? <p className="text-xs text-slate-400">暂无板块数据。</p> : sectors.map((item, index) => (
+                    <span key={`${String(item.name || index)}`} className="rounded-full border border-indigo-200/70 bg-indigo-50/80 px-3 py-1 text-[11px] font-bold text-indigo-600 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200">
+                      {String(item.name || item.sector || item.title || '板块')} {String(item.changePct || item.change_percent || item.pct_chg || '')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-slate-950/40 p-4">
+            <h3 className="mb-3 text-sm font-black text-slate-900 dark:text-white">AI 复盘报告</h3>
+            {report.report_markdown ? (
+              <div className="max-w-none text-sm leading-7 text-slate-700 dark:text-slate-200 [&_h1]:text-xl [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-black [&_h3]:mt-4 [&_h3]:font-black [&_li]:ml-5 [&_ul]:list-disc [&_ol]:list-decimal [&_table]:my-3 [&_table]:w-full [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:p-2">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.report_markdown}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">这条复盘没有 Markdown 正文，可能仍在处理或外部服务返回为空。</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-black text-slate-900 dark:text-white">历史复盘记录</h3>
+          <button
+            onClick={loadHistory}
+            disabled={historyLoading}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-500 disabled:opacity-50"
+          >
+            {historyLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            刷新
+          </button>
+        </div>
+
+        {history.length === 0 ? (
+          <p className="rounded-xl bg-white/40 dark:bg-slate-950/30 px-3 py-3 text-xs text-slate-400">还没有市场复盘记录。</p>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2">
+            {history.map((item) => (
+              <button
+                key={String(item.id)}
+                onClick={() => openHistory(item.id)}
+                className="rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-950/30 px-3 py-3 text-left transition hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10"
+              >
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-xs font-black text-slate-800 dark:text-white">{item.summary || '市场复盘'}</span>
+                  <ArrowLeft size={12} className="rotate-180 text-slate-400" />
+                </div>
+                <p className="mt-1 truncate text-[10px] text-slate-400">{formatTime(item.created_at)}</p>
+              </button>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Data display */}
-      {data && (
-        <div className="flex flex-col gap-3">
-          {/* Market breadth */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex flex-col items-center p-2 rounded-xl bg-white/40 dark:bg-slate-700/40">
-              <span className="text-[9px] text-slate-500 dark:text-slate-400">上涨</span>
-              <span className="text-sm font-black text-red-500">{data.broad.upCount}</span>
-            </div>
-            <div className="flex flex-col items-center p-2 rounded-xl bg-white/40 dark:bg-slate-700/40">
-              <span className="text-[9px] text-slate-500 dark:text-slate-400">下跌</span>
-              <span className="text-sm font-black text-green-500">{data.broad.downCount}</span>
-            </div>
-            <div className="flex flex-col items-center p-2 rounded-xl bg-white/40 dark:bg-slate-700/40">
-              <span className="text-[9px] text-slate-500 dark:text-slate-400">涨跌比</span>
-              <span className="text-sm font-black text-indigo-500">{data.broad.upDownRatio}</span>
-            </div>
-          </div>
-
-          {/* Index grid */}
-          <div className="grid grid-cols-1 gap-1.5">
-            {data.indices.map((index, i) => (
-              <motion.div
-                key={index.code}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/40 dark:bg-slate-700/40"
-              >
-                <div className="flex items-center gap-2">
-                  {index.isUp ? (
-                    <TrendingUp size={12} className="text-red-500" />
-                  ) : (
-                    <TrendingDown size={12} className="text-green-500" />
-                  )}
-                  <span className="text-xs font-bold text-slate-800 dark:text-white">{index.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{index.price}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                    index.isUp
-                      ? 'bg-red-50 dark:bg-red-900/30 text-red-500'
-                      : 'bg-green-50 dark:bg-green-900/30 text-green-500'
-                  }`}>
-                    {index.changePct}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Gainers and Losers */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Top Gainers */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 px-2">
-                <TrendingUp size={10} className="text-red-500" />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">涨幅榜</span>
-              </div>
-              {data.topGainers.map((item, i) => (
-                <motion.div
-                  key={item.code + i}
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.05 }}
-                  className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-red-50/50 dark:bg-red-900/20"
-                >
-                  <span className="text-[10px] text-slate-700 dark:text-slate-200 truncate max-w-[60px]">{item.name}</span>
-                  <span className="text-[10px] font-bold text-red-500">{item.changePct}</span>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Top Losers */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 px-2">
-                <TrendingDown size={10} className="text-green-500" />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">跌幅榜</span>
-              </div>
-              {data.topLosers.map((item, i) => (
-                <motion.div
-                  key={item.code + i}
-                  initial={{ opacity: 0, x: 5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.05 }}
-                  className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-green-50/50 dark:bg-green-900/20"
-                >
-                  <span className="text-[10px] text-slate-700 dark:text-slate-200 truncate max-w-[60px]">{item.name}</span>
-                  <span className="text-[10px] font-bold text-green-500">{item.changePct}</span>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!data && !loading && (
-        <div className="h-48 flex flex-col items-center justify-center text-slate-400">
-          <BarChart3 size={32} className="mb-2 opacity-30" />
-          <span className="text-[10px]">点击刷新获取每日行情</span>
-        </div>
-      )}
     </motion.div>
   );
 }

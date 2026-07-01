@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface UserProfile {
@@ -21,10 +21,25 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchProfile = () => {
-    const controller = new AbortController();
+  const fetchProfile = useCallback((signal?: AbortSignal) => {
     setLoading(true);
     setError('');
+    fetch(`/api/user/${id}`, { signal })
+      .then(res => {
+        if (!res.ok) throw new Error('User not found');
+        return res.json();
+      })
+      .then(data => setProfile(data.user))
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        setError('用户不存在或已注销');
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
     fetch(`/api/user/${id}`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('User not found');
@@ -36,11 +51,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
         setError('用户不存在或已注销');
       })
       .finally(() => setLoading(false));
-    return () => controller.abort();
-  };
 
-  useEffect(() => {
-    return fetchProfile();
+    return () => controller.abort();
   }, [id]);
 
   if (loading) {
@@ -56,7 +68,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error || '用户不存在'}</p>
-          <button onClick={fetchProfile} className="text-indigo-400 hover:text-indigo-300 text-sm mr-4">重试</button>
+          <button onClick={() => fetchProfile()} className="text-indigo-400 hover:text-indigo-300 text-sm mr-4">重试</button>
           <Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm">← 返回首页</Link>
         </div>
       </div>

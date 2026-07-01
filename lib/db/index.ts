@@ -132,6 +132,45 @@ function initTables(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_ai_usage_created ON ai_usage_logs(created_at);
+
+    CREATE TABLE IF NOT EXISTS stock_analysis_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER DEFAULT NULL,
+      stocks TEXT NOT NULL DEFAULT '[]',
+      market TEXT DEFAULT '',
+      report_type TEXT NOT NULL DEFAULT 'stock_analysis',
+      summary TEXT DEFAULT '',
+      report_markdown TEXT DEFAULT '',
+      raw_data TEXT DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+      error_message TEXT DEFAULT '',
+      external_report_id TEXT DEFAULT '',
+      external_task_id TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_stock_analysis_reports_created ON stock_analysis_reports(created_at);
+    CREATE INDEX IF NOT EXISTS idx_stock_analysis_reports_type ON stock_analysis_reports(report_type);
+    CREATE INDEX IF NOT EXISTS idx_stock_analysis_reports_status ON stock_analysis_reports(status);
+    CREATE INDEX IF NOT EXISTS idx_stock_analysis_reports_user ON stock_analysis_reports(user_id);
+
+    CREATE TABLE IF NOT EXISTS stock_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_type TEXT NOT NULL,
+      input_params TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'pending',
+      progress INTEGER DEFAULT 0,
+      external_task_id TEXT DEFAULT '',
+      result_report_id INTEGER DEFAULT NULL,
+      error_message TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (result_report_id) REFERENCES stock_analysis_reports(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_stock_tasks_status ON stock_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_stock_tasks_external ON stock_tasks(external_task_id);
+    CREATE INDEX IF NOT EXISTS idx_stock_tasks_created ON stock_tasks(created_at);
   `);
 
   // ---- 并发控制：version 字段 ----

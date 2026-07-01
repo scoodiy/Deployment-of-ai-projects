@@ -8,7 +8,7 @@ export const metadata = {
   description: "开源项目与代码仓库展示",
 };
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
   return (
     <div className="min-h-screen relative pb-20">
       <Navbar />

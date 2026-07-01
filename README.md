@@ -13,6 +13,7 @@
 - 🌳 **树洞（Tree）** — 匿名心情分享
 - 👥 **友链** — 友情链接管理
 - 🛠 **工具箱** — 天气查询等实用小工具
+- 📈 **股票智能分析** — 接入 daily_stock_analysis，支持个股 AI 分析与大盘复盘
 - 🔐 **后台管理** — 博客/评论/用户/图片/音乐/站点配置/标签/项目/日志 全方位管理
 - 🎨 **视觉效果** — 背景轮播、樱花/雪花粒子、萤火虫、页面切换动画、弹幕背景
 - 📱 **响应式设计** — 移动端适配
@@ -49,10 +50,46 @@
 │   └── tree/           # 树洞
 ├── components/         # 通用组件
 ├── lib/                # 工具库（数据库、认证、存储、API）
+│   └── stock/          # 股票分析适配层、服务层、校验逻辑
 ├── data/               # 静态数据 & SQLite 数据库
 ├── public/             # 静态资源
 └── siteConfig.ts       # 全站配置中心
 ```
+
+## 工具模块路由
+
+工具箱首页 `/tools` 只负责展示工具入口卡片；具体能力拆成独立页面，刷新和浏览器前进后退都走独立路由。
+
+- `/tools/stock-analysis` — 股票智能分析
+- `/tools/market-review` — 大盘复盘 / 市场分析
+- `/tools/camera-ocr` — 拍照识图翻译
+- `/tools/<tool-slug>` — 其他工具功能页
+
+旧入口 `/tools/stock`、`/tools/daily-stock` 会重定向到新页面。
+后台入口位于 `/admin/stock`，用于查看股票服务状态、检测集成可用性和浏览最近报告。
+
+## 股票分析模块
+
+股票模块采用 Next.js API 代理 + Python 独立服务的方式接入 `ZhuLinsen/daily_stock_analysis`，避免前端浏览器直接访问 Python 服务。
+
+Next.js 侧接口：
+
+- `POST /api/stock/analyze` — 个股 / 多股 AI 分析
+- `POST /api/stock/market-review` — 大盘复盘
+- `GET /api/stock/reports` — 历史报告列表
+- `GET /api/stock/reports/:id` — 历史报告详情
+- `GET /api/stock/config/status` — 检查模型和数据源配置
+- `POST /api/stock/config/test` — 检查集成可用性
+- `GET /api/stock` — 旧股票接口兼容说明，真实分析请使用上述 daily_stock_analysis 接口
+
+运行要求：
+
+- `daily_stock_analysis` 独立运行在 `127.0.0.1:8000`
+- Next.js 使用 `DAILY_STOCK_API_URL=http://127.0.0.1:8000` 调用它
+- Python 服务按需配置 `STOCK_LIST`、`LITELLM_MODEL`、`AGENT_LITELLM_MODEL` 和模型 API Key
+- 敏感 Key 只写入服务器 `.env`，不要提交到仓库
+- 如果分析任务较慢，本地报告会先保存为 `processing`；再次读取报告详情时会用外部任务 ID 刷新状态并补全 Markdown 报告。
+- `/api/stock/analyze`、`/api/stock/market-review`、`/api/stock/config/test` 带有轻量内存限流，避免公开入口被频繁触发。
 
 ## 快速开始
 
@@ -82,6 +119,8 @@ npm start
 
 - `ADMIN_PASSWORD` — 管理员密码
 - `JWT_SECRET` — JWT 签名密钥
+- `DAILY_STOCK_API_URL` — Next.js 服务端访问 daily_stock_analysis 的地址
+- `STOCK_LIST` / `LITELLM_MODEL` / `AGENT_LITELLM_MODEL` — daily_stock_analysis 运行配置
 - 其他可选配置见 `.env.example`
 
 ## License

@@ -6,6 +6,6 @@ export const metadata = {
   title: "音乐馆 | " + siteConfig.title,
 };
 
-export default function MusicPage() {
+export default async function MusicPage() {
   return <MusicClient />;
 }

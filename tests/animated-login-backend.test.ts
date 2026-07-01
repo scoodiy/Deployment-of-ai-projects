@@ -52,6 +52,21 @@ test('animated login page offers direct guest entry with desktop and mobile-spec
   assert.match(bundle, /y悠悠/);
   assert.match(bundle, /mobile-direct-link/);
   assert.match(bundle, /sessionStorage\.setItem\("animated-login-entered","1"\)/);
+  assert.match(bundle, /sessionStorage\.setItem\("curtain-played","1"\)/);
+  assert.match(bundle, /postMessage\(\{type:"animated-login-enter"\}/);
   assert.match(bundle, /window\.parent\.location\.href/);
+  assert.match(bundle, /href:"\/home"/);
   assert.doesNotMatch(bundle, /趣味登录/);
+});
+
+test('login route listens for animated login direct-entry messages', () => {
+  const page = readFileSync(path.join(process.cwd(), 'app', 'login', 'page.tsx'), 'utf8');
+  const client = readFileSync(path.join(process.cwd(), 'app', 'login', 'LoginPageClient.tsx'), 'utf8');
+
+  assert.match(page, /LoginPageClient/);
+  assert.match(client, /addEventListener\('message'/);
+  assert.match(client, /animated-login-enter/);
+  assert.match(client, /router\.replace\('\/home'\)/);
+  assert.match(client, /sessionStorage\.setItem\('animated-login-entered', '1'\)/);
+  assert.match(client, /sessionStorage\.setItem\('curtain-played', '1'\)/);
 });

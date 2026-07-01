@@ -9,7 +9,7 @@ export const metadata = {
   title: "文章 | " + siteConfig.title,
 };
 
-export default function Timeline() {
+export default async function Timeline() {
   const allPosts = getPublishedPosts();
 
   // 统计标签

@@ -254,3 +254,62 @@ export function rateLimitMiddleware(
   
   return { blocked: false };
 }
+
+interface RequestRateLimitOptions {
+  namespace: string;
+  limit: number;
+  windowMs: number;
+}
+
+interface RequestRateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+  retryAfterSeconds: number;
+  headers: Record<string, string>;
+}
+
+export function checkRequestRateLimit(request: Request, options: RequestRateLimitOptions): RequestRateLimitResult {
+  const now = Date.now();
+  const clientId = getClientIp(request);
+  const key = `${options.namespace}:${clientId}`;
+  const current = rateLimitStore.get(key);
+
+  if (!current || current.resetTime <= now) {
+    const resetAt = now + options.windowMs;
+    rateLimitStore.set(key, { count: 1, resetTime: resetAt });
+    return buildRequestRateLimitResult(true, options.limit - 1, resetAt, 0);
+  }
+
+  if (current.count >= options.limit) {
+    return buildRequestRateLimitResult(false, 0, current.resetTime, Math.ceil((current.resetTime - now) / 1000));
+  }
+
+  current.count += 1;
+  rateLimitStore.set(key, current);
+  return buildRequestRateLimitResult(true, Math.max(options.limit - current.count, 0), current.resetTime, 0);
+}
+
+function buildRequestRateLimitResult(
+  allowed: boolean,
+  remaining: number,
+  resetAt: number,
+  retryAfterSeconds: number,
+): RequestRateLimitResult {
+  const headers: Record<string, string> = {
+    'X-RateLimit-Remaining': String(remaining),
+    'X-RateLimit-Reset': String(Math.ceil(resetAt / 1000)),
+  };
+
+  if (!allowed) {
+    headers['Retry-After'] = String(retryAfterSeconds);
+  }
+
+  return {
+    allowed,
+    remaining,
+    resetAt,
+    retryAfterSeconds,
+    headers,
+  };
+}

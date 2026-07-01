@@ -8,27 +8,24 @@ import CyberCat from './CyberCat';
 import FloatingPlayer from './FloatingPlayer';
 import GlobalToolbox from './GlobalToolbox';
 
-function useIsAdminRoute() {
+function useRouteFlags() {
   const pathname = usePathname();
-  return pathname.startsWith('/admin');
-}
-
-function useIsStandaloneRoute() {
-  const pathname = usePathname();
-  return pathname === '/login';
+  return {
+    isAdminRoute: pathname.startsWith('/admin'),
+    isStandaloneRoute: pathname === '/login',
+    isCameraOcrRoute: pathname.startsWith('/tools/camera-ocr'),
+  };
 }
 
 export function PublicAnnouncementBanner() {
-  if (useIsStandaloneRoute()) return null;
-  if (useIsAdminRoute()) return null;
+  const { isAdminRoute, isStandaloneRoute } = useRouteFlags();
+  if (isStandaloneRoute || isAdminRoute) return null;
   return <AnnouncementBanner />;
 }
 
 export function PublicOverlays() {
-  const pathname = usePathname();
-  if (useIsAdminRoute()) return null;
-  if (useIsStandaloneRoute()) return null;
-  if (pathname.startsWith('/tools/camera-ocr')) return null;
+  const { isAdminRoute, isStandaloneRoute, isCameraOcrRoute } = useRouteFlags();
+  if (isAdminRoute || isStandaloneRoute || isCameraOcrRoute) return null;
 
   return (
     <>

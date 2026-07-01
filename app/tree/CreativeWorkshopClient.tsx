@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,21 +11,44 @@ import AlchemyLab from './AlchemyLab';
 import DijiangModel from './DijiangModel';
 // import OperatorRecreation from './OperatorRecreation'; // 🌟 先注释掉，以后需要随时可以加回来
 
+type ContentType = 'post' | 'chatter' | 'moment';
+
 type ContentItem = {
   id?: string | number;
   slug?: string;
   title?: string;
-  type?: string;
-  date?: string | Date;
-  cover?: string | null;
+  type?: ContentType;
+  date?: string;
+  cover?: string;
+  image?: string;
   content?: string;
+  description?: string;
+};
+
+type RawContentItem = Omit<ContentItem, 'cover' | 'date' | 'type'> & {
+  cover?: string | null;
+  date?: string | Date;
+  type?: string;
 };
 
 type CreativeWorkshopClientProps = {
-  posts?: ContentItem[];
-  chatters?: ContentItem[];
-  moments?: ContentItem[];
+  posts?: RawContentItem[];
+  chatters?: RawContentItem[];
+  moments?: RawContentItem[];
 };
+
+function normalizeContentType(value?: string): ContentType | undefined {
+  return value === 'post' || value === 'chatter' || value === 'moment' ? value : undefined;
+}
+
+function normalizeContentItems(items: RawContentItem[]): ContentItem[] {
+  return items.map((item) => ({
+    ...item,
+    type: normalizeContentType(item.type),
+    date: item.date instanceof Date ? item.date.toISOString() : item.date,
+    cover: item.cover || undefined,
+  }));
+}
 
 export default function CreativeWorkshopClient({
   posts = [],
@@ -34,6 +57,9 @@ export default function CreativeWorkshopClient({
 }: CreativeWorkshopClientProps) {
   const [currentMode, setCurrentMode] = useState<'alchemy' | 'model'>('alchemy'); // 🌟 暂时只保留两个状态
   const [isSwitching, setIsSwitching] = useState(false);
+  const normalizedPosts = useMemo(() => normalizeContentItems(posts), [posts]);
+  const normalizedChatters = useMemo(() => normalizeContentItems(chatters), [chatters]);
+  const normalizedMoments = useMemo(() => normalizeContentItems(moments), [moments]);
 
   const switchMode = (mode: 'alchemy' | 'model') => {
     if (isSwitching) return;
@@ -51,13 +77,13 @@ export default function CreativeWorkshopClient({
 
     try {
       // 1. 基础内容经验结算
-      const postsExp = posts.length * 50;
-      const chattersExp = chatters.length * 20;
-      const momentsExp = moments.length * 10;
+      const postsExp = normalizedPosts.length * 50;
+      const chattersExp = normalizedChatters.length * 20;
+      const momentsExp = normalizedMoments.length * 10;
       const contentExp = postsExp + chattersExp + momentsExp;
 
       // 2. 每日首发打卡经验结算 (去重计算绝对发布日期)
-      const allActivities = [...posts, ...chatters, ...moments];
+      const allActivities = [...normalizedPosts, ...normalizedChatters, ...normalizedMoments];
       const uniqueDays = new Set();
 
       allActivities.forEach(item => {
@@ -100,17 +126,17 @@ export default function CreativeWorkshopClient({
       console.log(`[总计累计] ${totalExp} EXP`);
       console.log(`%c[渐近公式] EXP_Next = 150 + Math.floor((2000 * (L-1)) / ((L-1) + 10)) [极限上限: 2150]`, 'color: #8b5cf6; font-style: italic;');
       console.table({
-        '文章发布 (50 EXP)': { '结算数量': posts.length, '贡献经验': postsExp },
-        '杂谈记录 (20 EXP)': { '结算数量': chatters.length, '贡献经验': chattersExp },
-        '每日说说 (10 EXP)': { '结算数量': moments.length, '贡献经验': momentsExp },
+        '文章发布 (50 EXP)': { '结算数量': normalizedPosts.length, '贡献经验': postsExp },
+        '杂谈记录 (20 EXP)': { '结算数量': normalizedChatters.length, '贡献经验': chattersExp },
+        '每日说说 (10 EXP)': { '结算数量': normalizedMoments.length, '贡献经验': momentsExp },
         '日历打卡 (100 EXP)': { '活跃天数': checkInDays, '贡献经验': checkInExp },
       });
       console.groupEnd();
 
-    } catch (error) {
+    } catch (_error) {
       // Silently handle errors in production - console.error is dev-only
     }
-  }, [posts, chatters, moments]);
+  }, [normalizedPosts, normalizedChatters, normalizedMoments]);
   // =========================================================
 
   return (
@@ -164,10 +190,10 @@ export default function CreativeWorkshopClient({
           {/* 动态渲染子组件 */}
           <AnimatePresence mode="wait">
             {currentMode === 'alchemy' && (
-              <AlchemyLab key="alchemy-view" posts={posts as any} chatters={chatters as any} moments={moments as any} />
+              <AlchemyLab key="alchemy-view" posts={normalizedPosts} chatters={normalizedChatters} moments={normalizedMoments} />
             )}
             {currentMode === 'model' && (
-              <DijiangModel key="model-view" posts={posts as any} chatters={chatters as any} moments={moments as any} />
+              <DijiangModel key="model-view" posts={normalizedPosts} chatters={normalizedChatters} moments={normalizedMoments} />
             )}
             {/* 🌟 第三种展示暂时隐藏 */}
           </AnimatePresence>

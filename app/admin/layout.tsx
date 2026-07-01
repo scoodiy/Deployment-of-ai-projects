@@ -21,6 +21,12 @@ const menuGroups = [
     ],
   },
   {
+    title: '数据工具',
+    items: [
+      { path: '/admin/stock', label: '股票分析', icon: '📈', description: '报告与服务状态' },
+    ],
+  },
+  {
     title: '互动管理',
     items: [
       { path: '/admin/comments', label: '评论管理', icon: '💬', description: '留言审核' },

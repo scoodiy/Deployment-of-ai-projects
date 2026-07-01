@@ -24,6 +24,10 @@ const eslintConfig = defineConfig([
     // Independent legacy application and one-off database repair script.
     "frontend/**",
     "fix-db.js",
+    // Static build artifacts are not source code and can produce thousands of false positives.
+    "public/**/*.js",
+    "public/animated-login/**",
+    "backups/**",
   ]),
 ]);
 

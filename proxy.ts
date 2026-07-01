@@ -6,7 +6,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev-secret-key-not-for-production' : (() => { throw new Error('生产环境必须配置 JWT_SECRET 环境变量'); })())
 );
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow login page and API login/logout endpoints

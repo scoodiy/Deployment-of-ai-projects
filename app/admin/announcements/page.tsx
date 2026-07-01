@@ -59,7 +59,6 @@ export default function AnnouncementsAdminPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<() => void>(null!);
   const [pendingTitle, setPendingTitle] = useState('');
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
   const { toast } = useToast();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '../../components/BackButton';
 import LoadingState from '../../components/LoadingState';
@@ -22,20 +22,37 @@ export default function ProjectsBoard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const loadProjects = () => {
-    let cancelled = false;
+  const loadProjects = useCallback(async () => {
     setLoading(true);
     setError(false);
-    fetch('/api/projects')
-      .then(res => res.json())
-      .then(data => { if (!cancelled) { setProjectsData(data.projects || []); } })
-      .catch(() => { if (!cancelled) { setError(true); } })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  };
+    try {
+      const res = await fetch('/api/projects');
+      const data = await res.json();
+      setProjectsData(data.projects || []);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    return loadProjects();
+    let cancelled = false;
+
+    async function loadInitialProjects() {
+      try {
+        const res = await fetch('/api/projects');
+        const data = await res.json();
+        if (!cancelled) setProjectsData(data.projects || []);
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadInitialProjects();
+    return () => { cancelled = true; };
   }, []);
 
   // Debounce search input

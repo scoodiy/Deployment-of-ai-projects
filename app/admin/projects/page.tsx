@@ -25,7 +25,6 @@ export default function ProjectsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: string; id: number; loading?: boolean } | null>(null);
   const [pendingName, setPendingName] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const loadProjects = useCallback(async () => {

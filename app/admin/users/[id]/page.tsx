@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../../../../components/admin/Toast';
-import ConfirmDialog, { InputDialog } from '../../../../components/admin/ConfirmDialog';
+import { InputDialog } from '../../../../components/admin/ConfirmDialog';
 
 interface User {
   id: number;
@@ -36,9 +36,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const [saving, setSaving] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<() => void>(null!);
-  const [confirmMessage, setConfirmMessage] = useState('');
   const [inputOpen, setInputOpen] = useState(false);
 
   useEffect(() => {
@@ -316,17 +313,6 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
       </div>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="确认操作"
-        message={confirmMessage}
-        danger
-        confirmText="确认"
-        cancelText="取消"
-        onConfirm={() => { setConfirmOpen(false); pendingAction?.(); }}
-        onCancel={() => setConfirmOpen(false)}
-      />
 
       <InputDialog
         open={inputOpen}

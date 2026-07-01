@@ -5,6 +5,6 @@ export const metadata = {
   title: "照片墙 | " + siteConfig.title,
 };
 
-export default function PhotoWallPage() {
+export default async function PhotoWallPage() {
   return <PhotoWallClient />;
 }

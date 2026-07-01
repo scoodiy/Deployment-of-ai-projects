@@ -75,7 +75,7 @@ function getLocalItems(directoryName: string, typeName: TreeContentType): TreeCo
   return items;
 }
 
-export default function CreativeWorkshopPage() {
+export default async function CreativeWorkshopPage() {
   const posts = getLocalItems('posts', 'post');
   const chatters = getLocalItems('chatters', 'chatter');
   const moments = getLocalItems('moments', 'moment');

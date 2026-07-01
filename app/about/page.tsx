@@ -5,7 +5,7 @@ export const metadata = {
   title: "关于",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
   const dbConfig = getSiteConfig();
 
   let danmakuCount = 0;
