@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth/user';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkUserNotBanned } from '@/lib/auth/ban-check';
 
 const SENSITIVE_WORDS = [
   'fuck', 'shit', 'asshole', 'bitch', 'dick', 'porn', 'sex',
@@ -65,12 +66,8 @@ export async function POST(request: Request) {
 
   const db = getDb();
 
-  const userRecord = db.prepare('SELECT status FROM users WHERE id = ?').get(Number(user.userId)) as Record<string, unknown> | undefined;
-  if (!userRecord) {
-    return NextResponse.json({ error: '用户不存在' }, { status: 404 });
-  }
-  if (userRecord.status === 'banned') {
-    return NextResponse.json({ error: '账号已被封禁，无法评论' }, { status: 403 });
+  if (!checkUserNotBanned(Number(user.userId))) {
+    return NextResponse.json({ error: '账号已被封禁' }, { status: 403 });
   }
 
   try {

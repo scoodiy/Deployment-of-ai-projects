@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/user';
 import { idempotentLike, idempotentUnlike } from '@/lib/concurrency';
 import { getDb } from '@/lib/db';
+import { checkUserNotBanned } from '@/lib/auth/ban-check';
 
 // GET /api/likes?target_type=blog&target_id=1 - 获取点赞数 + 当前用户是否已点赞
 export async function GET(request: Request) {
@@ -36,11 +37,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
-  // 检查用户状态
-  const { getDb } = await import('@/lib/db');
-  const db = getDb();
-  const userRecord = db.prepare('SELECT status FROM users WHERE id = ?').get(Number(Number(user.userId))) as Record<string, unknown> | undefined;
-  if (!userRecord || userRecord.status === 'banned') {
+  if (!checkUserNotBanned(Number(user.userId))) {
     return NextResponse.json({ error: '账号已被封禁' }, { status: 403 });
   }
 
