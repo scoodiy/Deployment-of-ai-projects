@@ -7,18 +7,14 @@ function getJwtSecret(): Uint8Array {
   if (_jwtSecret) return _jwtSecret;
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: JWT_SECRET environment variable is required in production');
-    }
-    _jwtSecret = new TextEncoder().encode('dev-secret-key-not-for-production');
-  } else {
-    _jwtSecret = new TextEncoder().encode(secret);
+    throw new Error('FATAL: JWT_SECRET environment variable is required');
   }
+  _jwtSecret = new TextEncoder().encode(secret);
   return _jwtSecret;
 }
 
-const TOKEN_NAME = 'admin_token';
-const TOKEN_EXPIRY = '2h';
+const TOKEN_NAME='***';
+const TOKEN_EXPIRY='***';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcryptjs.hash(password, 10);
@@ -59,7 +55,7 @@ export async function getTokenFromRequest(request: Request): Promise<string | nu
     const cookies = cookieHeader.split(';').map(c => c.trim());
     const tokenCookie = cookies.find(c => c.startsWith(`${TOKEN_NAME}=`));
     if (tokenCookie) {
-      return tokenCookie.split('=')[1];
+      return tokenCookie.split('=').slice(1).join('=');
     }
   }
 

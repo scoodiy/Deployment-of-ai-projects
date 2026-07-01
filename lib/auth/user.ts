@@ -8,13 +8,9 @@ function getUserJwtSecret(): Uint8Array {
 
   const secret = process.env.USER_JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: USER_JWT_SECRET environment variable is required in production');
-    }
-    userJwtSecret = new TextEncoder().encode('dev-user-secret-not-for-production');
-  } else {
-    userJwtSecret = new TextEncoder().encode(secret);
+    throw new Error('FATAL: USER_JWT_SECRET environment variable is required');
   }
+  userJwtSecret = new TextEncoder().encode(secret);
   return userJwtSecret;
 }
 
@@ -56,7 +52,7 @@ export async function getUserFromRequest(request: Request): Promise<Record<strin
       const cookies = cookieHeader.split(';').map(c => c.trim());
       const tokenCookie = cookies.find(c => c.startsWith('user_token='));
       if (tokenCookie) {
-        token = tokenCookie.split('=')[1];
+        token = tokenCookie.split('=').slice(1).join('=');
       }
     }
   }

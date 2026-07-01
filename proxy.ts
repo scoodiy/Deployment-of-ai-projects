@@ -3,10 +3,10 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret && process.env.NODE_ENV === 'production') {
+if (!jwtSecret) {
   throw new Error('❌ JWT_SECRET 环境变量未设置！生产环境必须配置安全密钥。');
 }
-const JWT_SECRET = new TextEncoder().encode(jwtSecret || 'dev-secret-key-not-for-production');
+const JWT_SECRET = new TextEncoder().encode(jwtSecret);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
